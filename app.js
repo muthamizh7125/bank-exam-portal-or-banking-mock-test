@@ -673,7 +673,33 @@ function genQ(section,topic,diff,seed){
    var midRank=(aRank+bLeft)/2;
    return mk("In a row of "+totalH+" candidates, P is "+aRank+"th from the left and Q is "+bRight+"th from the right. R sits exactly midway between P and Q. What is R's rank from the left?",midRank,[midRank-1,midRank+1,bLeft-aRank],"Q's rank from the left = "+totalH+" − "+bRight+" + 1 = "+bLeft+". R is midway between positions "+aRank+" and "+bLeft+": ("+aRank+" + "+bLeft+")/2 = "+midRank+".",40);
   }
-  if(/alphanumeric|number series|logical sequence/i.test(topic)){var a=ri(r,2,14),d=ri(r,3,9),arr=[a];for(var t=1;t<5;t++)arr.push(arr[t-1]+d+t);var nx=arr[4]+d+5;return mk("Find the next number: "+arr.join(", ")+", ?",nx,[nx+2,nx-3,nx+5],"The differences are "+d+", "+(d+1)+", "+(d+2)+", "+(d+3)+". Next add "+(d+4)+".",25);}
+  if(/alphanumeric|number series|logical sequence/i.test(topic)){
+   var mode=ri(r,0,4),q,ans,w,ex;
+   if(mode===0){
+    var a=ri(r,3,14),mul=ri(r,2,3),add=ri(r,2,9),v=[a];for(var i=0;i<4;i++)v.push(v[i]*mul+add);ans=v[4]*mul+add;
+    q="Find the next term in the series: "+v.join(", ")+", ?";w=[ans+mul*3,Math.max(1,ans-add),ans+add*4];ex="Each term is multiplied by "+mul+" and then "+add+" is added. "+v[4]+" × "+mul+" + "+add+" = "+ans+".";
+   }else if(mode===1){
+    var base=ri(r,3,10),offset=ri(r,2,15),sq=[];for(var j=0;j<5;j++)sq.push((base+j)*(base+j)+offset);ans=(base+5)*(base+5)+offset;
+    q="Find the missing number: "+sq.join(", ")+", ?";w=[ans+2*(base+5),ans-2*(base+5),ans+offset];ex="The terms are consecutive squares plus "+offset+". The next term is "+(base+5)+"² + "+offset+" = "+ans+".";
+   }else if(mode===2){
+    var first=ri(r,2,12),step=ri(r,3,8),increase=ri(r,1,4),nums=[first];for(var k=0;k<4;k++)nums.push(nums[k]+step+k*increase);ans=nums[4]+step+4*increase;
+    q="Find the missing term: "+nums.join(", ")+", ?";w=[ans+increase,Math.max(1,ans-step),ans+step];ex="The differences increase by "+increase+": "+[step,step+increase,step+2*increase,step+3*increase].join(", ")+". Next difference = "+(step+4*increase)+"; answer = "+ans+".";
+   }else if(mode===3){
+    var stride=ri(r,2,4),basePos=ri(r,0,25-4*stride),baseLetter=String.fromCharCode(65+basePos),startNo=ri(r,2,15),numStep=ri(r,2,6),terms=[];
+    for(var nidx=0;nidx<4;nidx++)terms.push(String.fromCharCode(65+basePos+nidx*stride)+(startNo+nidx*numStep));
+    ans=String.fromCharCode(65+basePos+4*stride)+(startNo+4*numStep);q="Find the next pair in the alphanumeric sequence: "+terms.join(", ")+", ?";
+    w=[String.fromCharCode(65+basePos+4*stride)+(startNo+3*numStep),String.fromCharCode(65+basePos+3*stride)+(startNo+4*numStep),String.fromCharCode(65+basePos+4*stride+1)+(startNo+4*numStep)];
+    ex="The letters advance "+stride+" places and the numbers advance "+numStep+" each term. The next pair is "+ans+".";
+   }else{
+    var stride2=ri(r,2,4),pos2=ri(r,0,24-3*stride2),pairs=[];
+    for(var pidx=0;pidx<3;pidx++)pairs.push(String.fromCharCode(65+pos2+pidx*stride2)+String.fromCharCode(66+pos2+pidx*stride2));
+    ans=String.fromCharCode(65+pos2+3*stride2)+String.fromCharCode(66+pos2+3*stride2);
+    q="Each letter pair advances "+stride2+" positions in the alphabet. Find the next pair: "+pairs.join(", ")+", ?";
+    w=[ans.split("").reverse().join(""),String.fromCharCode(65+pos2+2*stride2)+String.fromCharCode(66+pos2+3*stride2),String.fromCharCode(65+pos2+4*stride2)+String.fromCharCode(66+pos2+4*stride2)];
+    ex="Both letters in every pair advance "+stride2+" alphabet positions. The next pair is "+ans+".";
+   }
+   return mk(q,ans,w,ex,35);
+  }
   if(/data sufficiency/i.test(topic)){var yy=ri(r,4,25),xx=ri(r,2,18);return mk("What is x?<br><br>I. x + "+yy+" = "+(xx+yy)+".<br>II. x − "+yy+" = "+(xx-yy)+".<br><br>Choose the conclusion.", "Either statement alone is sufficient",["Both statements are required","Statement I alone is sufficient but II is not","Statement II alone is sufficient but I is not"],"Statement I alone gives x = "+xx+". Statement II alone also gives x = "+xx+".",35);}
   if(/seating|puzzles|floor|box|scheduling/i.test(topic)){return bankLabPuzzleQuestion(topic,r,mk,diff);}
   if(/logical reasoning/i.test(topic)){var subject=pick(r,["an applicant","a transaction","a branch","a loan file","a payment","an employee","a customer","an account"]),action=pick(r,["is flagged for review","has complete documents","passes verification","is overdue","has a valid signature","completes required training","has an expired credential","is approved by the manager"]),result=pick(r,["is reviewed by a specialist","moves to the next stage","cannot be approved automatically","is recorded in the audit log","receives a confirmation message","is escalated to the supervisor","is included in the report","is held for further checks"]);var logical=pick(r,[{q:"Rule: Every case that "+action+" "+result+". Case: "+subject+" "+action+". Which conclusion follows?",a:"The case "+result,w:["The case must be rejected permanently","The case was never submitted","No conclusion can be drawn"],e:"The stated rule applies to the described case, so the consequent follows."},{q:"Rule: If a record has an expired credential, it is not approved automatically. Record "+subject+" has an expired credential. What follows?",a:"The record is not approved automatically",w:["The record is approved immediately","The credential is valid","The record does not exist"],e:"The given condition directly implies that automatic approval is not allowed."},{q:"A bank reviews every payment that triggers a fraud alert. Payment "+subject+" triggered a fraud alert. Which conclusion follows?",a:"The payment is reviewed by the bank",w:["The payment is definitely fraudulent","The payment must be refunded","The payment was never attempted"],e:"The rule requires review after an alert; it does not prove the payment is fraudulent."},{q:"All reports that contain verified figures are sent to the audit team. This report contains verified figures. What follows?",a:"This report is sent to the audit team",w:["The report is deleted","The figures are unverified","No report exists"],e:"The report meets the condition in the rule, so it is sent to the audit team."}]);return mk(logical.q,logical.a,logical.w,logical.e,35);}
