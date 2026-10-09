@@ -352,7 +352,7 @@ function genQ(section,topic,diff,seed){
 
 function genAdvancedQuant(section,topic,diff,seed,mk){
  var r=rng(seed^0x71a5c39),n=function(a,b){return ri(r,a,b);},p=function(a){return pick(r,a);},hard=diff==="Hard";
- var gcd=function(a,b){return b?gcd(b,a%b):Math.abs(a%b);};
+ var gcd=function(a,b){return b?gcd(b,a%b):Math.abs(a);};
  if(/data sufficiency/i.test(topic)){
   var xx=n(12,48),yy=n(4,18);
   return mk("What is the value of x?<br><br>I. x + "+yy+" = "+(xx+yy)+".<br>II. 2x = "+(2*xx)+".<br><br>Choose the correct data-sufficiency conclusion.","Each statement alone is sufficient",["Only statement I is sufficient","Only statement II is sufficient","Both statements together are required"],"Statement I gives x = "+xx+". Statement II gives 2x = "+(2*xx)+", so x = "+xx+". Either statement alone is sufficient.",40);
@@ -409,7 +409,7 @@ function genAdvancedQuant(section,topic,diff,seed,mk){
  }
  if(/ratio & proportion/i.test(topic)){
   var rm=n(0,2);
-  if(rm===0){var ra=n(4,9),rb=n(3,8),unit=n(12,30),transfer=n(2,6)*unit,total=(ra+rb)*unit,newA=ra*unit+transfer,newB=rb*unit-transfer,g=gcd(newA,newB);return mk("Two account balances are in the ratio "+ra+":"+rb+" and together total ₹"+total+". ₹"+transfer+" is transferred from the second account to the first. What is the new ratio?",(newA/g)+":"+(newB/g),[ra+":"+rb,(newA+transfer)+":"+(newB-transfer),(newA/g+1)+":"+(newB/g)],"One ratio part = ₹"+unit+". Balances after transfer are ₹"+newA+" and ₹"+newB+". Reduce by common factor "+g+".",45);}
+  if(rm===0){var ra=n(4,9),rb=n(3,8),unit=n(12,30),transfer=n(1,Math.min(3,rb-1))*unit,total=(ra+rb)*unit,newA=ra*unit+transfer,newB=rb*unit-transfer,g=gcd(newA,newB);return mk("Two account balances are in the ratio "+ra+":"+rb+" and together total ₹"+total+". ₹"+transfer+" is transferred from the second account to the first. What is the new ratio?",(newA/g)+":"+(newB/g),[ra+":"+rb,(newA+transfer)+":"+(newB-transfer),(newA/g+1)+":"+(newB/g)],"One ratio part = ₹"+unit+". Balances after transfer are ₹"+newA+" and ₹"+newB+". Reduce by common factor "+g+".",45);}
   if(rm===1){var a=n(5,9),b=n(3,7),third=n(2,6),total2=(a+b)*n(20,80)*100,share=total2*a/(a+b);return mk("A fund is divided among three teams in the ratio "+a+":"+b+":"+third+". The first two teams together receive ₹"+total2+". How much does the first team receive?",share,[share+total2*.1,total2*b/(a+b),Math.max(0,share-total2*.08)],"The first two teams account for "+(a+b)+" parts. One part = ₹"+total2/(a+b)+". First team's share = "+a+" parts = ₹"+share+".",40);}
   var ratioA=n(5,9),ratioB=n(3,7),incomeA=ratioA*n(4000,12000),incomeB=ratioB*n(4000,12000),increase=n(10,30),newInc=incomeA*(100+increase)/100,percentDiff=Math.round((newInc-incomeB)/incomeB*100);return mk("A's monthly income is ₹"+incomeA+" and B's is ₹"+incomeB+". A receives a "+increase+"% raise while B's income is unchanged. By what percentage is A's new income higher or lower than B's?",percentDiff,[Math.round((incomeA-incomeB)/incomeB*100),Math.round((newInc-incomeB)/newInc*100),increase+5],"A's new income = ₹"+newInc+". Percentage difference relative to B = ("+newInc+" − "+incomeB+")/"+incomeB+" × 100 = "+percentDiff+"%.",45);
  }
