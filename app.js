@@ -182,7 +182,68 @@ function genQ(section,topic,diff,seed){
    ["Which is an input device?","Keyboard",["Monitor","Speaker","Projector"],"A keyboard sends input to a computer."],
    ["In a spreadsheet, what does B4 usually mean?","Column B, row 4",["Workbook 4","Four sheets named B","Row B, column 4"],"Cell references name the column then the row."]
   ];
-  var f=pick(r,cf);return mk(f[0],f[1],f[2],f[3],25);
+  var cfChoice=cf;
+  if(/operating systems/i.test(topic))cfChoice=[
+   ["Which of these is an operating system?","Linux",["SQL","HTML","DNS"],"Linux is an operating system."],
+   ["What is the primary role of an operating system?","Manage hardware resources and provide services for applications",["Only edit photographs","Only transmit electricity","Only create web addresses"],"An operating system manages resources and offers common services to applications."],
+   ["Which of these is a desktop operating system?","Microsoft Windows",["MySQL","SMTP","JPEG"],"Microsoft Windows is a desktop operating system."],
+   ["What is a kernel?","The core part of an operating system",["A spreadsheet formula","A network cable","A database row"],"The kernel manages essential system resources."],
+   ["Which feature allows an operating system to run multiple tasks in overlapping time periods?","Multitasking",["Formatting","Phishing","Defragmenting only"],"Multitasking supports the execution or scheduling of multiple tasks."],
+   ["Which file system is commonly associated with Windows installations?","NTFS",["DNS","SMTP","HTML"],"NTFS is a file system used by Windows."],
+   ["Which interface uses typed commands to interact with a computer?","Command-line interface",["Touchscreen glass","Printer queue","Graphical wallpaper"],"A command-line interface accepts text commands."],
+   ["What is the purpose of a device driver?","Allow the operating system to communicate with hardware",["Create a bank account","Encrypt every website automatically","Replace the CPU"],"Drivers let the OS work with specific hardware devices."]
+  ];
+  else if(/hardware|software/i.test(topic))cfChoice=[
+   ["Which component is commonly called the computer's main processor?","CPU",["RAM","SSD","NIC"],"The CPU executes instructions."],
+   ["Which memory is volatile?","RAM",["ROM","Optical disc","Flash drive when unplugged"],"RAM usually loses its contents when power is removed."],
+   ["Which component stores data persistently in a modern computer?","SSD",["CPU register only","ALU","Cache that clears on shutdown"],"An SSD is non-volatile storage."],
+   ["Which is an example of application software?","A spreadsheet program",["CPU microcode only","A physical keyboard","An Ethernet cable"],"Application software helps users perform tasks."],
+   ["Which type of software manages the computer's resources?","System software",["Presentation theme only","Printed manual","Desk accessory"],"System software includes operating systems and related utilities."],
+   ["Which unit is commonly used to measure CPU clock rate?","Hertz",["Pixels per inch","Litres","Decibels"],"Clock rate is measured in hertz, commonly gigahertz."],
+   ["Which of these is an input device?","Keyboard",["Monitor","Speaker","Projector"],"A keyboard sends input to a computer."],
+   ["What is the role of a compiler?","Translate source code into another form such as machine code",["Route packets between networks","Measure screen size","Store a web address"],"A compiler translates source code before execution or further processing."]
+  ];
+  else if(/network|internet/i.test(topic))cfChoice=[
+   ["What does URL stand for?","Uniform Resource Locator",["Universal Routing Link","Unified Record Location","User Reference Label"],"A URL identifies a resource location on the web."],
+   ["Which protocol is commonly used to browse websites securely?","HTTPS",["Telnet","FTP without security","HTTP only"],"HTTPS protects web traffic using TLS."],
+   ["What does DNS do?","Maps domain names to network addresses",["Formats spreadsheets","Encrypts every local file","Checks printer ink"],"DNS resolves domain names to IP addresses."],
+   ["What does LAN stand for?","Local Area Network",["Large Access Number","Logical Application Node","Linked Account Name"],"A LAN connects devices within a limited area."],
+   ["What is the main role of a router?","Forward data packets between networks",["Print documents","Calculate spreadsheet sums","Store passwords as a database"],"Routers forward packets between networks."],
+   ["Which protocol is commonly used to send email between mail servers?","SMTP",["HTML","JPEG","USB"],"SMTP is used to send email."],
+   ["What is an IP address used for?","Identify a network interface for internet-protocol communication",["Measure CPU temperature","Format a paragraph","Identify a spreadsheet tab"],"IP addresses identify interfaces in IP networks."],
+   ["Which protocol suite underpins most internet communication?","TCP/IP",["NTFS","DOCX","BIOS"],"TCP/IP is the core protocol suite used on the internet."]
+  ];
+  else if(/office|shortcuts/i.test(topic))cfChoice=[
+   ["Which keyboard shortcut usually copies selected text in Windows?","Ctrl + C",["Ctrl + V","Ctrl + X","Ctrl + P"],"Ctrl+C copies selected content."],
+   ["Which keyboard shortcut usually pastes copied content in Windows?","Ctrl + V",["Ctrl + C","Ctrl + X","Ctrl + Z"],"Ctrl+V pastes clipboard content."],
+   ["In a spreadsheet, what does B4 usually mean?","Column B, row 4",["Workbook number 4","Four sheets named B","Row B, column 4"],"A cell reference uses a column label followed by a row number."],
+   ["Which spreadsheet function adds a range of numbers?","SUM",["COUNTIF only","LEFT","NOW"],"SUM adds values in selected cells or ranges."],
+   ["What is a workbook in spreadsheet software?","A file that can contain multiple worksheets",["A single keyboard key","A network packet","A printer driver"],"A workbook can contain multiple worksheets."],
+   ["Which shortcut commonly undoes the last action in Windows applications?","Ctrl + Z",["Ctrl + P","Ctrl + A","Ctrl + S"],"Ctrl+Z typically undoes the last action."],
+   ["Which shortcut commonly saves the current document?","Ctrl + S",["Ctrl + F","Ctrl + W","Ctrl + D"],"Ctrl+S saves the current file."],
+   ["In word processing, what is a header?","Content displayed in the top margin of a page",["A computer cable","A database password","A network address"],"A header appears in the top margin of a document page."]
+  ];
+  else if(/database/i.test(topic))cfChoice=[
+   ["Which of these is a relational database management system?","MySQL",["Bluetooth","JPEG","SMTP"],"MySQL is a relational database system."],
+   ["What is a primary key used for?","Uniquely identify each row in a table",["Format the monitor","Encrypt every browser request","Increase CPU clock speed"],"A primary key uniquely identifies records."],
+   ["What does SQL stand for?","Structured Query Language",["Secure Queue Link","System Quality Log","Standard Query Layout"],"SQL is Structured Query Language."],
+   ["In a relational database, data is commonly organised into what?","Tables made up of rows and columns",["Only audio tracks","Router antennas","Slides only"],"Relational databases store data in tables."],
+   ["What is a database query used for?","Retrieve or manipulate data according to specified criteria",["Cool the CPU","Change screen brightness","Replace a keyboard"],"A query requests or changes database information."],
+   ["Which SQL command is commonly used to retrieve records?","SELECT",["PAINT","ROUTE","PRINTSCREEN"],"SELECT retrieves data from a database."],
+   ["What is a foreign key used for?","Link records between related tables",["Measure website speed","Encrypt a hard drive by itself","Print a report automatically"],"A foreign key references a key in another table."],
+   ["Which property helps reduce duplicate and inconsistent data in database design?","Normalisation",["Phishing","Defragmentation","Screen mirroring"],"Normalisation organises tables to reduce redundancy."]
+  ];
+  else if(/cybersecurity/i.test(topic))cfChoice=[
+   ["What is phishing?","A deceptive attempt to obtain sensitive information",["A reconciliation method","A deposit insurance type","An interest formula"],"Phishing uses deceptive messages or websites to steal information."],
+   ["What is malware?","Software intended to harm, exploit or gain unauthorised access",["A backup schedule","A printer driver only","A public-key standard"],"Malware is malicious software."],
+   ["What is multi-factor authentication?","Using two or more different types of verification",["Using the same password twice","Disabling all account checks","A way to compress files"],"MFA combines multiple verification factors."],
+   ["What is ransomware?","Malware that blocks access or encrypts data and demands payment",["A normal software update","A spreadsheet function","A wireless router"],"Ransomware commonly demands payment after restricting access to data."],
+   ["Why is encryption used?","To make information unreadable without the required key",["To increase screen resolution","To guarantee a device never fails","To remove every software bug"],"Encryption protects data confidentiality."],
+   ["What is social engineering in cybersecurity?","Manipulating people into revealing information or taking unsafe actions",["A database indexing method","A graphics format","A CPU scheduling method"],"Social engineering targets human behaviour."],
+   ["What is a firewall's primary purpose?","Filter network traffic using security rules",["Increase screen brightness","Store spreadsheet formulas","Cool the CPU"],"A firewall controls permitted and blocked network traffic."],
+   ["Which practice improves password security?","Use a unique long password and a password manager",["Reuse one short password everywhere","Share passwords in public messages","Disable account recovery"],"Unique, strong passwords reduce the impact of credential reuse."]
+  ];
+  var f=pick(r,cfChoice.length?cfChoice:cf);return mk(f[0],f[1],f[2],f[3],25);
  }
  if(section==="english"){
   if(/error|sentence correction|phrase replacement|grammar/i.test(topic)){
