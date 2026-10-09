@@ -1,20 +1,20 @@
 # BankLab — Banking Exam Simulator
 
-This repository is prepared for free GitHub Pages deployment. The Pages workflow is in `.github/workflows/pages.yml`.
+**Live website:** https://muthamizh7125.github.io/bank-exam-portal-or-banking-mock-test/
 
-## Add the website files
+BankLab is a browser-based practice site for banking exam aspirants. It includes a TCS iON-style test interface, sectional timing, question palette, mock paper selection, and review/analytics screens.
 
-1. Download the BankLab GitHub Pages ZIP from the ChatGPT conversation.
-2. Extract it locally.
-3. In this repository, choose **Add file → Upload files**.
-4. Upload the extracted files themselves to the repository root (not the ZIP and not an extra enclosing folder). The root must include `index.html`, `app.js`, `questions.js`, `styles.css`, `manifest.webmanifest`, and `sw.js`.
-5. Commit to `main`.
+## How it is deployed
 
-## Enable Pages once
+- The website files live in `bank-exam-portal/`.
+- The GitHub Actions workflow at `.github/workflows/pages.yml` publishes that folder to GitHub Pages on updates.
+- Static files and question data are served by Pages; no server or paid API is required.
 
-Open **Settings → Pages → Build and deployment → Source**, select **GitHub Actions**, and save. After the site files are committed, the workflow will upload and deploy the website. Monitor the deployment in the **Actions** tab.
+## Main files
 
-The expected address is:
-https://muthamizh7125.github.io/bank-exam-portal-or-banking-mock-test/
+- `bank-exam-portal/index.html` — exam interface and UI
+- `bank-exam-portal/app.js` — timer, question navigation, scoring and analysis
+- `bank-exam-portal/questions_bank.json` — question bank for practice papers
+- `bank-exam-portal/styles.css` — interface styling
 
-BankLab is a personal practice tool and is not affiliated with SBI or IBPS. Its generated sets are practice material, not official previous-year papers.
+BankLab is an independent practice project and is not affiliated with SBI or IBPS. Questions are practice material, not official previous-year papers.
