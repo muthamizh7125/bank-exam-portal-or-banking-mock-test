@@ -103,7 +103,66 @@ function genQ(section,topic,diff,seed){
    ["Which system is commonly used for immediate interbank electronic transfers?","IMPS",["Paper-only clearing","Demand draft clearing","Treasury bill auction"],"IMPS supports immediate interbank electronic fund transfers."],
    ["What is the usual purpose of a credit score?","To summarise a borrower's credit history and risk profile",["Set the repo rate","Measure account balance only","Calculate tax directly"],"Credit scores help lenders assess credit history and risk."]
   ];
-  var fact=pick(r,facts),phrases=[fact[0],"For an Indian banking-awareness quiz: "+fact[0].charAt(0).toLowerCase()+fact[0].slice(1),"Choose the correct banking fact. "+fact[0]];
+  var topicFacts=[];
+  if(/government schemes/i.test(topic))topicFacts=[
+   ["Which scheme aims to provide basic bank accounts and wider financial inclusion?","Pradhan Mantri Jan-Dhan Yojana",["Pradhan Mantri Fasal Bima Yojana","Stand-Up India only","Atal Innovation Mission"],"PMJDY promotes access to basic banking services."],
+   ["Pradhan Mantri Jeevan Jyoti Bima Yojana primarily provides what?","Life insurance cover",["Crop procurement","Housing loans only","Pension fund supervision"],"PMJJBY is a life-insurance scheme."],
+   ["Pradhan Mantri Suraksha Bima Yojana primarily provides what?","Accident insurance cover",["A savings account","Education loans","Crop price support"],"PMSBY provides eligible accident insurance cover."],
+   ["Atal Pension Yojana is focused on what?","Pension support in old age",["Securities trading","Export insurance only","Agricultural procurement"],"APY is a pension scheme."],
+   ["The MUDRA initiative is primarily intended to support which borrowers?","Micro and small non-corporate businesses",["Only large listed companies","Only central banks","Only foreign governments"],"MUDRA supports eligible micro-enterprise lending."],
+   ["PM SVANidhi was designed mainly to support which group?","Street vendors",["Large exporters","Insurance brokers","Stock exchanges"],"PM SVANidhi supports street vendors with working-capital assistance."],
+   ["Stand-Up India supports eligible entrepreneurs from which groups?","Women and SC/ST entrepreneurs",["Only central-bank employees","Only listed companies","Only overseas banks"],"Stand-Up India promotes entrepreneurship among women and SC/ST borrowers."],
+   ["PM-KISAN provides eligible farmers with what type of support?","Income support",["Deposit insurance","Stock-market credit","Pension-regulator licensing"],"PM-KISAN provides income support to eligible farmer families."],
+   ["Which scheme is associated with affordable life insurance for eligible bank-account holders?","Pradhan Mantri Jeevan Jyoti Bima Yojana",["PM SVANidhi","MUDRA only","Atal Innovation Mission"],"PMJJBY is a life-insurance scheme."],
+   ["Which scheme is specifically associated with accident insurance?","Pradhan Mantri Suraksha Bima Yojana",["Pradhan Mantri Jan-Dhan Yojana","PM-KISAN","Stand-Up India"],"PMSBY provides eligible accident insurance cover."],
+   ["Which scheme encourages savings for a girl child's future?","Sukanya Samriddhi Yojana",["PM SVANidhi","PMJJBY","PM-KISAN"],"Sukanya Samriddhi Yojana is a small-savings scheme for a girl child."],
+   ["Which scheme is associated with health assurance for eligible beneficiaries?","Ayushman Bharat PM-JAY",["MUDRA","APY","PMSBY"],"PM-JAY is a health-assurance component of Ayushman Bharat."]
+  ];
+  else if(/rbi|monetary policy/i.test(topic))topicFacts=[
+   ["Which RBI committee decides the policy repo rate?","Monetary Policy Committee",["SEBI Board","DICGC Board","NPCI Council"],"The RBI's Monetary Policy Committee determines the policy repo rate."],
+   ["What does an open-market operation generally involve?","RBI purchases or sales of government securities",["Banks changing account passwords","SEBI approving insurance policies","Customers opening savings accounts"],"Open-market operations use securities transactions to manage liquidity."],
+   ["The Cash Reserve Ratio requires banks to maintain a specified cash balance with which institution?","Reserve Bank of India",["SEBI","NABARD only","NPCI"],"CRR is maintained as a cash balance with RBI."],
+   ["What is the main purpose of monetary policy?","Influence liquidity, interest conditions and inflation",["Set school curricula","Regulate road transport","Approve every company merger"],"Monetary policy influences financial conditions and price stability."],
+   ["What is the repo rate in general terms?","The rate at which RBI lends short-term funds to banks against eligible securities",["The rate a customer pays on every savings account","The GST rate on insurance","The exchange rate fixed by an individual bank"],"The policy repo rate is associated with RBI lending to banks against eligible collateral."],
+   ["Which report discusses risks to India's financial system and is published by RBI?","Financial Stability Report",["Human Development Report","Global Innovation Index","World Economic Outlook only"],"RBI publishes the Financial Stability Report."],
+   ["What does SLR require banks to maintain?","Specified liquid assets against their liabilities",["Only cash at ATMs","Only foreign shares","Only physical gold in branches"],"SLR concerns prescribed liquid assets held by banks."],
+   ["Which institution is responsible for India's central-bank monetary policy?","Reserve Bank of India",["IRDAI","SEBI","PFRDA"],"RBI is India's central bank."]
+  ];
+  else if(/economy|reports/i.test(topic))topicFacts=[
+   ["GDP at market prices measures what in an economy?","The value of final goods and services produced within a period",["Only exports","Only intermediate goods","Only government salaries"],"GDP measures the value of final output produced in an economy."],
+   ["The Consumer Price Index primarily tracks changes in what?","Prices of a basket of goods and services consumed by households",["Only stock prices","Only export volumes","Only tax collections"],"CPI tracks consumer-level price changes."],
+   ["Fiscal deficit broadly reflects what?","Total expenditure minus total receipts excluding borrowings",["Exports minus imports only","Bank deposits minus bank loans","Tax refunds alone"],"Fiscal deficit measures the government's funding gap before borrowing."],
+   ["Which organisation compiles India's official Consumer Price Index statistics?","National Statistical Office",["NPCI","DICGC","IRDAI"],"The NSO compiles major official price statistics."],
+   ["Which department in the Ministry of Finance prepares the Economic Survey?","Department of Economic Affairs",["Department of Telecommunications","Department of School Education","Department of Atomic Energy"],"The Economic Survey is prepared by the Department of Economic Affairs."],
+   ["A current-account balance includes which broad categories?","Trade in goods and services, income and current transfers",["Only government borrowings","Only foreign direct investment","Only gold reserves"],"The current account covers goods, services, primary income and current transfers."],
+   ["What does a country's balance of payments record?","Economic transactions between residents and the rest of the world",["Only domestic ATM withdrawals","Only one bank's deposits","Only local property sales"],"The balance of payments records transactions between residents and non-residents."],
+   ["What does inflation generally mean?","A sustained increase in the general price level",["A fall in every price","An increase in bank branch count only","A fall in GDP by definition"],"Inflation is a sustained rise in the general price level."],
+   ["Which institution publishes the World Economic Outlook?","International Monetary Fund",["NPCI","DICGC","IRDAI"],"The IMF publishes the World Economic Outlook."],
+   ["Which institution publishes the Human Development Report?","United Nations Development Programme",["RBI","SEBI","NABARD"],"UNDP publishes the Human Development Report."]
+  ];
+  else if(/current affairs/i.test(topic))topicFacts=[
+   ["Which city hosted the G20 Leaders' Summit in India in September 2023?","New Delhi",["Mumbai","Chennai","Hyderabad"],"The 2023 G20 Leaders' Summit in India was held in New Delhi."],
+   ["India held the G20 presidency in which year?","2023",["2020","2021","2025"],"India held the G20 presidency in 2023."],
+   ["Chandrayaan-3 achieved its lunar soft landing on which date?","23 August 2023",["15 August 2022","26 January 2024","2 October 2023"],"Chandrayaan-3 landed on the Moon on 23 August 2023."],
+   ["What was the name of Chandrayaan-3's lander?","Vikram",["Pragyan","Aditya","Gaganyaan"],"Vikram was the Chandrayaan-3 lander; Pragyan was the rover."],
+   ["Aditya-L1 is a mission designed to study which object?","The Sun",["Mars","Venus","Saturn"],"Aditya-L1 is India's solar-observation mission."],
+   ["Which city hosted the 2024 Summer Olympic Games?","Paris",["Rome","Tokyo","Madrid"],"Paris hosted the 2024 Summer Olympics."],
+   ["Which country hosted COP29 in 2024?","Azerbaijan",["Brazil","India","Canada"],"COP29 was held in Baku, Azerbaijan."],
+   ["Which organisation won the 2024 Nobel Peace Prize?","Nihon Hidankyo",["World Food Programme","International Committee of the Red Cross","UNICEF"],"The 2024 Nobel Peace Prize was awarded to Nihon Hidankyo."],
+   ["Which country won the ICC Men's T20 World Cup in 2024?","India",["Australia","England","New Zealand"],"India won the 2024 ICC Men's T20 World Cup."],
+   ["What is the name of India's first solar observatory mission?","Aditya-L1",["Chandrayaan-2","Mangalyaan-2","INSAT-1A"],"Aditya-L1 is India's solar observatory mission."]
+  ];
+  else if(/static gk/i.test(topic))topicFacts=[
+   ["Which organisation is India's central bank?","Reserve Bank of India",["SEBI","IRDAI","NPCI"],"RBI is India's central bank."],
+   ["Where is the headquarters of NABARD?","Mumbai",["New Delhi","Chennai","Kolkata"],"NABARD's headquarters are in Mumbai."],
+   ["Which city is the headquarters of SEBI?","Mumbai",["Chennai","Jaipur","Lucknow"],"SEBI is headquartered in Mumbai."],
+   ["Which organisation operates the UPI payment system?","NPCI",["IRDAI","PFRDA","NABARD"],"NPCI operates UPI."],
+   ["Which body regulates India's insurance sector?","IRDAI",["SEBI","NPCI","DICGC"],"IRDAI regulates the insurance sector."],
+   ["Which institution insures eligible bank deposits in India?","DICGC",["SEBI","NPCI","PFRDA"],"DICGC provides deposit insurance."],
+   ["Which regulator is associated with the pension sector in India?","PFRDA",["IRDAI","NPCI","DICGC"],"PFRDA regulates and develops the pension sector."],
+   ["Which institution is a development financial institution for MSMEs?","SIDBI",["SEBI","IRDAI","NPCI"],"SIDBI supports the MSME sector."]
+  ];
+  var fact=pick(r,topicFacts.length?topicFacts:facts),phrases=[fact[0],"For an Indian banking-awareness quiz: "+fact[0].charAt(0).toLowerCase()+fact[0].slice(1),"Choose the correct banking fact. "+fact[0]];
   return mk(p(phrases),fact[1],fact[2],fact[3],25);
  }
  if(section==="computer"||section==="reasonComp"&&/computer|network|database|software|hardware|operating|office|cyber/i.test(topic)){
