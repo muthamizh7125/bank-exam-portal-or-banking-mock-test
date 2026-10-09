@@ -609,10 +609,59 @@ function genQ(section,topic,diff,seed){
    var statement="Given "+vars[0]+" "+pat.s[0]+" "+vars[1]+", "+vars[1]+" "+pat.s[1]+" "+vars[2]+" and "+vars[2]+" "+pat.s[2]+" "+vars[3]+", which relation is definitely true between "+vars[0]+" and "+vars[3]+"?";
    return mk(statement,relation,[vars[0]+" < "+vars[3],vars[0]+" > "+vars[3],vars[0]+" = "+vars[3],"Relationship cannot be determined"].filter(function(z){return z!==relation;}).slice(0,3),pat.why,25);
   }
-  if(/coding/i.test(topic)){var word=pick(r,["BANK","LOAN","CASH","FUND","RATE","MINT","GOLD","RISK"]),shift=ri(r,1,3),code=word.split("").map(function(c){return String.fromCharCode(65+(c.charCodeAt(0)-65+shift)%26);}).join("");return mk("Every letter is moved "+shift+" place(s) forward in the alphabet. How is “"+word+"” coded?",code,[word.split("").map(function(c){return String.fromCharCode(65+(c.charCodeAt(0)-65+shift+1)%26);}).join(""),word.split("").reverse().join(""),word],"Move each letter "+shift+" place(s) forward: "+word+" → "+code+".",25);}
+  if(/coding/i.test(topic)){
+   var words=["BANK","LOAN","CASH","FUND","RATE","MINT","GOLD","RISK","DEBT","CRED","LOAN","BOND","SAVE","CARD","LEND","VAULT","AUDIT","TRUST","ASSET","CLAIM","TRADE","PROOF"],word=pick(r,words),mode=diff==="Hard"?ri(r,0,3):ri(r,0,2),shift=ri(r,1,3),code,ex,wrong=[];
+   function move(ch,n){return String.fromCharCode(65+(ch.charCodeAt(0)-65+n+26)%26);}
+   if(mode===0){
+    code=word.split("").reverse().map(function(ch){return move(ch,shift);}).join("");
+    ex="Reverse the word and move each letter "+shift+" place(s) forward. "+word+" → "+word.split("").reverse().join("")+" → "+code+".";
+    wrong=[word.split("").map(function(ch){return move(ch,shift);}).join(""),word.split("").reverse().map(function(ch){return move(ch,shift+1);}).join(""),word];
+    return mk("In a code, a word is first written in reverse order and then each letter is moved "+shift+" place(s) forward. How is “"+word+"” coded?",code,wrong,ex,35);
+   }
+   if(mode===1){
+    code=word.split("").map(function(ch,i){return move(ch,i%2===0?shift:-shift);}).join("");
+    ex="Move letters in odd positions forward by "+shift+" and letters in even positions backward by "+shift+". "+word+" → "+code+".";
+    wrong=[word.split("").map(function(ch){return move(ch,shift);}).join(""),word.split("").map(function(ch,i){return move(ch,i%2===0?-shift:shift);}).join(""),word.split("").reverse().join("")];
+    return mk("In a code, letters in odd positions are moved "+shift+" place(s) forward and letters in even positions "+shift+" place(s) backward. How is “"+word+"” coded?",code,wrong,ex,40);
+   }
+   if(mode===2){
+    code=word.split("").map(function(ch){return ch.charCodeAt(0)-64;}).join("");
+    ex="Write each letter's alphabet position in order: "+word.split("").map(function(ch){return ch+"="+(ch.charCodeAt(0)-64);}).join(", ")+". Code = "+code+".";
+    wrong=[word.split("").reverse().map(function(ch){return ch.charCodeAt(0)-64;}).join(""),word.split("").map(function(ch){return ch.charCodeAt(0)-63;}).join(""),String(word.split("").reduce(function(a,ch){return a+ch.charCodeAt(0)-64;},0))];
+    return mk("A word is coded by replacing each letter with its alphabet position (A=1, B=2, …, Z=26) and joining the numbers. What is the code for “"+word+"”?",code,wrong,ex,35);
+   }
+   var encoded=word.split("").map(function(ch,i){return move(ch,(i+1)*shift);}).join("");
+   ex="Move the first letter forward "+shift+", the second "+(2*shift)+", the third "+(3*shift)+", and so on. "+word+" → "+encoded+".";
+   wrong=[word.split("").map(function(ch){return move(ch,shift);}).join(""),word.split("").reverse().join(""),word.split("").map(function(ch,i){return move(ch,(i+1)*shift+1);}).join("")];
+   return mk("A code shifts successive letters forward by "+shift+", "+(2*shift)+", "+(3*shift)+" and "+(4*shift)+" positions respectively. How is “"+word+"” coded?",encoded,wrong,ex,45);
+  }
   if(/blood/i.test(topic)){var family=["Asha","Bala","Charan","Divya","Eshan","Farah","Gopal","Harini","Imran","Jaya","Kavin","Lakshmi","Mani","Nila","Pranav","Ravi","Sara","Tara","Uma","Vijay"];var people=[];while(people.length<3){var nm=pick(r,family);if(!people.includes(nm))people.push(nm);}var brType=ri(r,0,2),br;if(brType===0)br={q:people[0]+" is the sister of "+people[1]+". "+people[1]+" is the son of "+people[2]+". How is "+people[0]+" related to "+people[2]+"?",c:"Daughter",w:["Sister","Mother","Aunt"],e:people[0]+" and "+people[1]+" are children of "+people[2]+". "+people[0]+" is the daughter."};else if(brType===1)br={q:people[0]+" is the father of "+people[1]+". "+people[1]+" is the sister of "+people[2]+". How is "+people[0]+" related to "+people[2]+"?",c:"Father",w:["Uncle","Brother","Grandfather"],e:people[1]+" and "+people[2]+" are siblings; "+people[0]+" is their father."};else br={q:people[0]+" is the mother of "+people[1]+". "+people[1]+" is the father of "+people[2]+". How is "+people[0]+" related to "+people[2]+"?",c:"Grandmother",w:["Aunt","Sister","Mother"],e:people[0]+" is the mother of the child's father, so she is the grandmother."};return mk(br.q,br.c,br.w,br.e,25);}
-  if(/direction|distance/i.test(topic)){var no=ri(r,3,12),ea=ri(r,4,15);return mk("A person walks "+no+" km north and then "+ea+" km east. In which direction is the person from the starting point?","North-East",["North-West","South-East","South-West"],"The final position is both north and east of the starting point.",25);}
-  if(/ranking|order/i.test(topic)){var tot=ri(r,24,65),top=ri(r,3,Math.floor(tot/2)),bot=tot-top+1;return mk("In a class of "+tot+" students, Ravi ranks "+top+"th from the top. What is his rank from the bottom?",bot,[bot+1,bot-1,top],"Rank from bottom = total − rank from top + 1 = "+tot+" − "+top+" + 1 = "+bot+".",20);}
+  if(/direction|distance/i.test(topic)){
+   if(diff==="Easy"){
+    var north=ri(r,8,22),east=ri(r,6,18);
+    return mk("A field officer walks "+north+" km north from a branch and then "+east+" km east. In which direction is the officer from the branch?", "North-East",["North-West","South-East","South-West"],"The final position is north and east of the starting point, so the direction is North-East.",25);
+   }
+   var eastA=ri(r,18,35),westA=ri(r,4,Math.max(5,eastA-4)),northA=ri(r,20,40),southA=ri(r,3,Math.max(4,northA-3)),dx=eastA-westA,dy=northA-southA,dist=Math.sqrt(dx*dx+dy*dy),dir=dx>0?(dy>0?"North-East":"South-East"):dx<0?(dy>0?"North-West":"South-West"):(dy>0?"North":"South");
+   if(diff==="Hard"&&r()<.5){
+    var d1=ri(r,12,30),d2=ri(r,5,17),d3=ri(r,4,Math.max(5,d1-2)),d4=ri(r,3,14),netNorth=d1-d3,netEast=d2+d4,answerDir=netNorth>=0?(netEast>=0?"North-East":"North-West"):(netEast>=0?"South-East":"South-West");
+    return mk("An officer walks "+d1+" m north, turns right and walks "+d2+" m, turns right again and walks "+d3+" m, then turns left and walks "+d4+" m. In which direction is the officer from the starting point?",answerDir,["North-East","North-West","South-East","South-West"].filter(function(x){return x!==answerDir;}).slice(0,3),"Net northward displacement = "+d1+" − "+d3+" = "+netNorth+" m. Net eastward displacement = "+d2+" + "+d4+" = "+netEast+" m. The final position is "+answerDir+".",45);
+   }
+   return mk("An officer walks "+eastA+" km east, "+northA+" km north, "+westA+" km west and "+southA+" km south. What is the shortest distance from the starting point (nearest 0.1 km)?",Number(dist.toFixed(1)),[Number((dist+4).toFixed(1)),Number(Math.max(0.1,dist-3).toFixed(1)),Number((dx+dy).toFixed(1))],"Net eastward displacement = "+eastA+" − "+westA+" = "+dx+" km. Net northward displacement = "+northA+" − "+southA+" = "+dy+" km. Shortest distance = √("+dx+"² + "+dy+"²) = "+dist.toFixed(1)+" km.",45);
+  }
+  if(/ranking|order/i.test(topic)){
+   if(diff==="Easy"){
+    var tot=ri(r,35,75),top=ri(r,6,Math.floor(tot/2)),bot=tot-top+1;
+    return mk("In a class of "+tot+" candidates, Meena ranks "+top+"th from the top. What is her rank from the bottom?",bot,[bot+1,bot-1,top],"Rank from bottom = total − rank from top + 1 = "+tot+" − "+top+" + 1 = "+bot+".",20);
+   }
+   if(diff==="Moderate"){
+    var total=ri(r,55,90),leftRank=ri(r,10,24),rightRank=ri(r,12,25),between=total-leftRank-rightRank;
+    return mk("In a row of "+total+" candidates, Arun is "+leftRank+"th from the left and Bala is "+rightRank+"th from the right. How many candidates are sitting between them if Arun is to the left of Bala?",between,[between+1,between-1,total-leftRank+rightRank],"Bala's position from the left = "+total+" − "+rightRank+" + 1 = "+(total-rightRank+1)+". People between them = "+(total-rightRank+1)+" − "+leftRank+" − 1 = "+between+".",35);
+   }
+   var totalH=ri(r,60,95),aRank=ri(r,12,24),bRight=ri(r,12,24),bLeft=totalH-bRight+1,mid=(aRank+bLeft)/2;
+   if((aRank+bLeft)%2!==0){bLeft=aRank+2*ri(r,5,15);bRight=totalH-bLeft+1;}
+   var midRank=(aRank+bLeft)/2;
+   return mk("In a row of "+totalH+" candidates, P is "+aRank+"th from the left and Q is "+bRight+"th from the right. R sits exactly midway between P and Q. What is R's rank from the left?",midRank,[midRank-1,midRank+1,bLeft-aRank],"Q's rank from the left = "+totalH+" − "+bRight+" + 1 = "+bLeft+". R is midway between positions "+aRank+" and "+bLeft+": ("+aRank+" + "+bLeft+")/2 = "+midRank+".",40);
+  }
   if(/alphanumeric|number series|logical sequence/i.test(topic)){var a=ri(r,2,14),d=ri(r,3,9),arr=[a];for(var t=1;t<5;t++)arr.push(arr[t-1]+d+t);var nx=arr[4]+d+5;return mk("Find the next number: "+arr.join(", ")+", ?",nx,[nx+2,nx-3,nx+5],"The differences are "+d+", "+(d+1)+", "+(d+2)+", "+(d+3)+". Next add "+(d+4)+".",25);}
   if(/data sufficiency/i.test(topic)){var yy=ri(r,4,25),xx=ri(r,2,18);return mk("What is x?<br><br>I. x + "+yy+" = "+(xx+yy)+".<br>II. x − "+yy+" = "+(xx-yy)+".<br><br>Choose the conclusion.", "Either statement alone is sufficient",["Both statements are required","Statement I alone is sufficient but II is not","Statement II alone is sufficient but I is not"],"Statement I alone gives x = "+xx+". Statement II alone also gives x = "+xx+".",35);}
   if(/seating|puzzles|floor|box|scheduling/i.test(topic)){return bankLabPuzzleQuestion(topic,r,mk,diff);}
