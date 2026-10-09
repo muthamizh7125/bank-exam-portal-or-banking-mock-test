@@ -346,7 +346,7 @@ function genQ(section,topic,diff,seed){
    else if(choose===5)sy={s:"All "+a+" are "+b+". No "+b+" is "+c+".",c:"Both conclusions I and II follow",w:["Only conclusion I follows","Only conclusion II follows","Neither conclusion follows"],cns:"I. No "+a+" is "+c+". II. No "+c+" is "+a+".",e:"A is inside B, and B has no overlap with C. Therefore A and C do not overlap; the no-overlap relation is reversible."};
    else if(choose===6)sy={s:"Some "+a+" are "+b+". No "+b+" is "+c+".",c:"Only conclusion I follows",w:["Only conclusion II follows","Both conclusions I and II follow","Neither conclusion follows"],cns:"I. Some "+a+" are not "+c+". II. Some "+a+" are "+c+".",e:"The A members that are B cannot be C, so some A are not C. A's other members may or may not be C."};
    else sy={s:"All "+a+" are "+b+". Some "+a+" are "+c+".",c:"Both conclusions I and II follow",w:["Only conclusion I follows","Only conclusion II follows","Neither conclusion follows"],cns:"I. Some "+b+" are "+c+". II. Some "+c+" are "+b+".",e:"The people who are both A and C must also be B. Therefore some B are C, and the relation converts to some C are B."};
-   return mk("Statements: "+sy.s+"<br><br>Conclusions: "+sy.cns+"<br><br>Which conclusion(s) follow?",sy.c,sy.w,sy.e,hard?50:40);
+   return mk("Statements: "+sy.s+"<br><br>Conclusions: "+sy.cns+"<br><br>Which conclusion(s) follow?",sy.c,sy.w,sy.e,diff==="Hard"?50:40);
   }
   if(/inequalities/i.test(topic)){
    var vars=[];while(vars.length<4){var candidate=pick(r,["A","B","C","D","P","Q","R","S","K","L","M","N","X","Y","Z"]);if(!vars.includes(candidate))vars.push(candidate);}
