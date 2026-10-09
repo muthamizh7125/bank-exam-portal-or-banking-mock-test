@@ -373,12 +373,13 @@ function genAdvancedQuant(section,topic,diff,seed,mk){
  }
  if(/simplification|approximation/i.test(topic)){
   if(/approximation/i.test(topic)){
-   var ap=p([{q:"(799.6 ÷ 19.9) × 24.8 + 48.9",a:1050,e:"Round to (800 ÷ 20) × 25 + 50 = 1,050."},{q:"(1,248 ÷ 31.2) × 18.9 − 52.1",a:800,e:"Round to (1,250 ÷ 30) × 20 − 50 ≈ 783; nearest option is 800."},{q:"(1,598 ÷ 39.8) × 15.2 + 61.1",a:650,e:"Round to (1,600 ÷ 40) × 15 + 50 = 650."}]);
-   return mk("Approximate: "+ap.q+" = ?",ap.a,[ap.a+50,Math.max(1,ap.a-50),ap.a+100],ap.e,25);
+   var baseSets=[{v:498.6,b:500,d:24.9,bd:25},{v:598.3,b:600,d:29.8,bd:30},{v:798.9,b:800,d:39.7,bd:40},{v:748.4,b:750,d:24.8,bd:25},{v:898.7,b:900,d:29.9,bd:30},{v:998.5,b:1000,d:24.9,bd:25},{v:1198.8,b:1200,d:29.8,bd:30}],bs=p(baseSets),mults=[{v:14.8,a:15},{v:19.7,a:20},{v:24.8,a:25},{v:29.6,a:30},{v:34.9,a:35}],ms=p(mults),adds=[{v:29.4,a:30},{v:39.3,a:40},{v:49.6,a:50},{v:59.2,a:60},{v:69.5,a:70}],ad=p(adds),approxAnswer=bs.b/bs.bd*ms.a+ad.a;
+   return mk("Approximate: ("+bs.v+" ÷ "+bs.d+") × "+ms.v+" + "+ad.v+" = ?",approxAnswer,[approxAnswer+50,Math.max(1,approxAnswer-50),approxAnswer+100],"Round to convenient values: ("+bs.b+" ÷ "+bs.bd+") × "+ms.a+" + "+ad.a+" = "+approxAnswer+".",25);
   }
-  var ex=p([{q:"(35% of 840) + (5/8 of 640) − √625 × 4",a:594,e:"35% of 840 = 294; 5/8 of 640 = 400; √625 × 4 = 100. Result = 594."},{q:"18² ÷ 9 + 32% of 750 − 3³",a:249,e:"18² ÷ 9 = 36; 32% of 750 = 240; 3³ = 27. Result = 249."},{q:"(7/12 of 864) ÷ 7 + 45% of 360",a:234,e:"7/12 of 864 = 504; 504 ÷ 7 = 72; 45% of 360 = 162. Result = 234."},{q:"(48% of 625) + (7/9 of 729) − √1296",a:831,e:"48% of 625 = 300; 7/9 of 729 = 567; √1296 = 36. Result = 831."},{q:"√2025 + 28% of 850 − 3² × 7",a:220,e:"√2025 = 45; 28% of 850 = 238; 3² × 7 = 63. Result = 220."}]);
-  return mk("Simplify: "+ex.q+" = ?",ex.a,[ex.a+17,Math.max(1,ex.a-19),ex.a+31],ex.e,30);
+  var pct=p([15,20,25,30,35,40,45]),base=100*n(4,12),den=p([5,6,8,10]),num=n(2,den-1),fracBase=den*n(30,90),root=n(18,32),mult=p([2,3,4]),square=root*root,first=base*pct/100,second=fracBase*num/den,third=root*mult,ans=first+second-third;
+  return mk("Simplify: ("+pct+"% of "+base+") + ("+num+"/"+den+" of "+fracBase+") − √"+square+" × "+mult+" = ?",ans,[ans+19,Math.max(1,ans-23),ans+31],"("+pct+"% of "+base+") = "+first+"; ("+num+"/"+den+" of "+fracBase+") = "+second+"; √"+square+" × "+mult+" = "+third+". Final value = "+ans+".",30);
  }
+
  if(/number series/i.test(topic)){
   var mode=hard?n(0,3):n(0,2),v=[],ans,ex;
   if(mode===0){var first=n(18,75),step=n(5,18),inc=n(2,6);v=[first];for(var si=0;si<5;si++)v.push(v[si]+step+si*inc);ans=v[5];ex="Differences are "+[step,step+inc,step+2*inc,step+3*inc].join(", ")+". The next difference is "+(step+4*inc)+", giving "+ans+".";}
@@ -413,8 +414,14 @@ function genAdvancedQuant(section,topic,diff,seed,mk){
   var ratioA=n(5,9),ratioB=n(3,7),incomeA=ratioA*n(4000,12000),incomeB=ratioB*n(4000,12000),increase=n(10,30),newInc=incomeA*(100+increase)/100,percentDiff=Math.round((newInc-incomeB)/incomeB*100);return mk("A's monthly income is ₹"+incomeA+" and B's is ₹"+incomeB+". A receives a "+increase+"% raise while B's income is unchanged. By what percentage is A's new income higher or lower than B's?",percentDiff,[Math.round((incomeA-incomeB)/incomeB*100),Math.round((newInc-incomeB)/newInc*100),increase+5],"A's new income = ₹"+newInc+". Percentage difference relative to B = ("+newInc+" − "+incomeB+")/"+incomeB+" × 100 = "+percentDiff+"%.",45);
  }
  if(/profit|loss|discount/i.test(topic)){
-  var cp=n(800,hard?6000:3200),profit=p([15,20,25,30,35]),discount=p([10,15,20,25]),mp=cp*(100+profit)/100,sp=mp*(100-discount)/100,actual=(sp-cp)/cp*100;return mk("A retailer marks an item "+profit+"% above cost price and offers a "+discount+"% discount on the marked price. What is the actual profit or loss percentage?",Number(actual.toFixed(2)),[Number((profit-discount).toFixed(2)),Number((actual+5).toFixed(2)),Number((actual-5).toFixed(2))],"Cost price = ₹"+cp+". Marked price = ₹"+mp+". Selling price after discount = ₹"+sp+". Net profit percentage = "+actual.toFixed(2)+"%.",45);
+  if(hard&&r()<.45){
+   var cp=n(900,8500),markup=p([18,20,25,30,35,40]),d1=p([10,12,15,20]),d2=p([5,8,10,12]),mp=cp*(100+markup)/100,sp=mp*(100-d1)*(100-d2)/10000,net=(sp/cp-1)*100;
+   return mk("A shopkeeper marks an item "+markup+"% above cost price, then gives successive discounts of "+d1+"% and "+d2+"%. Find the final profit percentage (nearest 0.1%).",Number(net.toFixed(1)),[Number((markup-d1-d2).toFixed(1)),Number((net+4).toFixed(1)),Number((net-4).toFixed(1))],"Let CP = ₹"+cp+". Final SP = "+cp+" × "+(100+markup)+"/100 × "+(100-d1)+"/100 × "+(100-d2)+"/100 = ₹"+sp.toFixed(2)+". Net profit = "+net.toFixed(1)+"%.",50);
+  }
+  var cp2=n(800,hard?6500:4000),markup2=p([12,15,20,25,30,35,40]),discount2=p([10,12,15,20,25]),mp2=cp2*(100+markup2)/100,sp2=mp2*(100-discount2)/100,profit2=sp2-cp2,net2=profit2/cp2*100;
+  return mk("An item costs ₹"+cp2+". The seller marks it "+markup2+"% above cost and offers a "+discount2+"% discount on the marked price. What is the final selling price?",Math.round(sp2),[Math.round(cp2*(1+(markup2-discount2)/100)),Math.round(sp2+cp2*.05),Math.round(sp2-cp2*.08)],"Marked price = ₹"+cp2+" × "+(100+markup2)+"/100 = ₹"+mp2+". Discounted selling price = ₹"+mp2+" × "+(100-discount2)+"/100 = ₹"+Math.round(sp2)+". Net profit margin = "+net2.toFixed(2)+"%.",45);
  }
+
  if(/interest/i.test(topic)){
   var principal=n(5000,hard?50000:25000),rate=p([8,10,12,15]),years=n(2,hard?5:3),ci=principal*(Math.pow(1+rate/100,years)-1),si=principal*rate*years/100;return mk("Find the difference between compound interest and simple interest on ₹"+principal+" at "+rate+"% p.a. for "+years+" years, compounded annually.",Number((ci-si).toFixed(2)),[Number(ci.toFixed(2)),Number(si.toFixed(2)),Number((ci-si+principal*.02).toFixed(2))],"Compound interest = ₹"+ci.toFixed(2)+". Simple interest = ₹"+si.toFixed(2)+". Difference = ₹"+(ci-si).toFixed(2)+".",50);
  }
