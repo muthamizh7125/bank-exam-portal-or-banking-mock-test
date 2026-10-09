@@ -369,7 +369,7 @@ function genQ(section,topic,diff,seed){
   if(/ranking|order/i.test(topic)){var tot=ri(r,24,65),top=ri(r,3,Math.floor(tot/2)),bot=tot-top+1;return mk("In a class of "+tot+" students, Ravi ranks "+top+"th from the top. What is his rank from the bottom?",bot,[bot+1,bot-1,top],"Rank from bottom = total − rank from top + 1 = "+tot+" − "+top+" + 1 = "+bot+".",20);}
   if(/alphanumeric|number series|logical sequence/i.test(topic)){var a=ri(r,2,14),d=ri(r,3,9),arr=[a];for(var t=1;t<5;t++)arr.push(arr[t-1]+d+t);var nx=arr[4]+d+5;return mk("Find the next number: "+arr.join(", ")+", ?",nx,[nx+2,nx-3,nx+5],"The differences are "+d+", "+(d+1)+", "+(d+2)+", "+(d+3)+". Next add "+(d+4)+".",25);}
   if(/data sufficiency/i.test(topic)){var yy=ri(r,4,25),xx=ri(r,2,18);return mk("What is x?<br><br>I. x + "+yy+" = "+(xx+yy)+".<br>II. x − "+yy+" = "+(xx-yy)+".<br><br>Choose the conclusion.", "Either statement alone is sufficient",["Both statements are required","Statement I alone is sufficient but II is not","Statement II alone is sufficient but I is not"],"Statement I alone gives x = "+xx+". Statement II alone also gives x = "+xx+".",35);}
-  if(/seating|puzzles|floor|box|scheduling/i.test(topic)){return bankLabPuzzleQuestion(r,mk,diff);}
+  if(/seating|puzzles|floor|box|scheduling/i.test(topic)){return bankLabPuzzleQuestion(topic,r,mk,diff);}
   if(/logical reasoning/i.test(topic)){var subject=pick(r,["an applicant","a transaction","a branch","a loan file","a payment","an employee","a customer","an account"]),action=pick(r,["is flagged for review","has complete documents","passes verification","is overdue","has a valid signature","completes required training","has an expired credential","is approved by the manager"]),result=pick(r,["is reviewed by a specialist","moves to the next stage","cannot be approved automatically","is recorded in the audit log","receives a confirmation message","is escalated to the supervisor","is included in the report","is held for further checks"]);var logical=pick(r,[{q:"Rule: Every case that "+action+" "+result+". Case: "+subject+" "+action+". Which conclusion follows?",a:"The case "+result,w:["The case must be rejected permanently","The case was never submitted","No conclusion can be drawn"],e:"The stated rule applies to the described case, so the consequent follows."},{q:"Rule: If a record has an expired credential, it is not approved automatically. Record "+subject+" has an expired credential. What follows?",a:"The record is not approved automatically",w:["The record is approved immediately","The credential is valid","The record does not exist"],e:"The given condition directly implies that automatic approval is not allowed."},{q:"A bank reviews every payment that triggers a fraud alert. Payment "+subject+" triggered a fraud alert. Which conclusion follows?",a:"The payment is reviewed by the bank",w:["The payment is definitely fraudulent","The payment must be refunded","The payment was never attempted"],e:"The rule requires review after an alert; it does not prove the payment is fraudulent."},{q:"All reports that contain verified figures are sent to the audit team. This report contains verified figures. What follows?",a:"This report is sent to the audit team",w:["The report is deleted","The figures are unverified","No report exists"],e:"The report meets the condition in the rule, so it is sent to the audit team."}]);return mk(logical.q,logical.a,logical.w,logical.e,35);}
   return mk("If P > Q, Q = R and R > S, which relation is definitely true?","P > S",["P < S","P = S","Cannot be determined"],"P > Q = R > S, therefore P > S.",25);
  }
@@ -494,37 +494,56 @@ function bankLabOrders(n){
  }
  build([],base);BANKLAB_ORDER_CACHE[n]=out;return out;
 }
-function bankLabPuzzleQuestion(r,mk,diff){
- var size=diff==="Easy"?5:diff==="Moderate"?6:7,orders=bankLabOrders(size),target=orders[ri(r,0,orders.length-1)].slice(),clues=[],chosen=[],solutionCount=orders.length;
- function pos(order,name){return order.indexOf(name);}
+function bankLabPuzzleQuestion(topic,r,mk,diff){
+ var base=["Asha","Bala","Charan","Divya","Eshan","Farah","Gopal"],days=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],size=diff==="Easy"?5:diff==="Moderate"?6:7,kind;
+ if(/seating arrangements/i.test(topic))kind=0;
+ else if(/puzzles \(/i.test(topic))kind=ri(r,0,2);
+ else if(/floor|box/i.test(topic))kind=1;
+ else if(/scheduling|month|date/i.test(topic))kind=2;
+ else kind=ri(r,0,2);
+ var names=base.slice(0,size),orders=bankLabOrders(size),target=orders[ri(r,0,orders.length-1)].slice(),clues=[],chosen=[],solutionCount=orders.length;
+ function add(text,obj){obj.text=text;clues.push(obj);}
  for(var i=0;i<size;i++)for(var j=i+1;j<size;j++){
-  var left=target[i],right=target[j],gap=j-i;
-  clues.push({text:gap===1?left+" sits immediately to the left of "+right+".":"There "+(gap===2?"is one person":"are "+(gap-1)+" people")+" between "+left+" and "+right+", and "+left+" sits to the left of "+right+".",test:function(o,l,r,g){return pos(o,r)-pos(o,l)===g;}.bind(null),left:left,right:right,gap:gap});
+  var left=target[i],right=target[j],gap=j-i,text;
+  if(kind===0)text=gap===1?left+" sits immediately to the left of "+right+".":"There are "+(gap-1)+" people between "+left+" and "+right+", with "+left+" to the left of "+right+".";
+  else if(kind===1)text=gap===1?left+" lives immediately below "+right+".":"There are "+(gap-1)+" floors between "+left+" and "+right+", and "+left+" lives below "+right+".";
+  else text=gap===1?left+"'s appointment is the day before "+right+"'s.":left+"'s appointment is scheduled "+gap+" days before "+right+"'s.";
+  add(text,{type:"gap",left:left,right:right,gap:gap});
  }
- target.forEach(function(name){if(target[0]===name)clues.push({text:name+" sits at the left end.",test:function(o,x){return pos(o,x)===0;},name:name});if(target[size-1]===name)clues.push({text:name+" sits at the right end.",test:function(o,x){return pos(o,x)===size-1;},name:name});});
+ add(kind===0?target[0]+" sits at the left end.":kind===1?target[0]+" lives on the lowest floor.":target[0]+"'s appointment is first in the week.",{type:"first",person:target[0]});
+ add(kind===0?target[size-1]+" sits at the right end.":kind===1?target[size-1]+" lives on the highest floor.":target[size-1]+"'s appointment is last in the week.",{type:"last",person:target[size-1]});
  for(var a=0;a<size;a++)for(var b=a+2;b<size;b++){
-  var one=target[a],two=target[b];
-  clues.push({text:one+" is not adjacent to "+two+".",test:function(o,x,y){return Math.abs(pos(o,x)-pos(o,y))>1;},one:one,two:two});
+  var one=target[a],two=target[b],txt=kind===0?one+" and "+two+" do not sit next to each other.":kind===1?one+" and "+two+" do not live on adjacent floors.":one+"'s and "+two+"'s appointments are not on consecutive days.";
+  add(txt,{type:"nonadjacent",one:one,two:two});
  }
- for(var c=clues.length-1;c>0;c--){var ci=ri(r,0,c),ct=clues[c];clues[c]=clues[ci];clues[ci]=ct;}
- function testClue(clue,order){
-  if(clue.left)return order.indexOf(clue.right)-order.indexOf(clue.left)===clue.gap;
-  if(clue.name)return clue.text.indexOf("left end")>=0?order[0]===clue.name:order[size-1]===clue.name;
-  if(clue.one)return Math.abs(order.indexOf(clue.one)-order.indexOf(clue.two))>1;
+ for(var c=clues.length-1;c>0;c--){var ci=ri(r,0,c),tmp=clues[c];clues[c]=clues[ci];clues[ci]=tmp;}
+ function matches(clue,order){
+  if(clue.type==="gap")return order.indexOf(clue.right)-order.indexOf(clue.left)===clue.gap;
+  if(clue.type==="first")return order[0]===clue.person;
+  if(clue.type==="last")return order[order.length-1]===clue.person;
+  if(clue.type==="nonadjacent")return Math.abs(order.indexOf(clue.one)-order.indexOf(clue.two))>1;
   return false;
  }
  for(var k=0;k<clues.length;k++){
   chosen.push(clues[k]);
-  var matches=orders.filter(function(o){return chosen.every(function(cl){return testClue(cl,o);});});
-  solutionCount=matches.length;
+  var matchesFound=orders.filter(function(o){return chosen.every(function(cl){return matches(cl,o);});});
+  solutionCount=matchesFound.length;
   if(solutionCount===1)break;
  }
- var questioner=target[ri(r,0,size-3)],answer=target[target.indexOf(questioner)+2],others=target.filter(function(x){return x!==answer;});
- var distractors=[];
- while(distractors.length<3){var option=pick(r,others);if(!distractors.includes(option))distractors.push(option);}
- var statement="Six/seven people sit in a row facing north.<br><br>"+chosen.map(function(x){return x.text;}).join("<br>")+"<br><br>Who sits second to the right of "+questioner+"?";
- var explanation="Use the positional and relative clues to fix the unique order from left to right: "+target.join(" — ")+". The second person to the right of "+questioner+" is "+answer+".";
- return mk(statement,answer,distractors,explanation,hardPuzzleTime(diff));
+ var subject,answer,distractors,question,explanation;
+ if(kind===0){
+  var asker=target[ri(r,0,size-3)];answer=target[target.indexOf(asker)+2];subject="Who sits second to the right of "+asker+"?";distractors=target.filter(function(x){return x!==answer;});
+  explanation="The clues determine the unique left-to-right order: "+target.join(" — ")+". The second person to the right of "+asker+" is "+answer+".";
+ }else if(kind===1){
+  var resident=pick(r,target),floorNo=target.indexOf(resident)+1;answer="Floor "+floorNo;subject="Counting the lowest floor as Floor 1, on which floor does "+resident+" live?";distractors=[];while(distractors.length<3){var f=ri(r,1,size),v="Floor "+f;if(v!==answer&&!distractors.includes(v))distractors.push(v);}
+  explanation="The unique order from lowest to highest floor is "+target.join(" → ")+". "+resident+" is "+floorNo+(floorNo===1?"st":floorNo===2?"nd":floorNo===3?"rd":"th")+" from the bottom, so the answer is "+answer+".";
+ }else{
+  var scheduled=pick(r,target);answer=days[target.indexOf(scheduled)];subject="On which day is "+scheduled+"'s appointment scheduled?";distractors=[];while(distractors.length<3){var day=pick(r,days.slice(0,size));if(day!==answer&&!distractors.includes(day))distractors.push(day);}
+  explanation="The clues establish the weekly schedule from Monday onward: "+target.map(function(person,i){return days[i]+": "+person;}).join("; ")+". "+scheduled+"'s appointment falls on "+answer+".";
+ }
+ var allParticipants=kind===0?"People: "+names.join(", ")+".":kind===1?"Residents: "+names.join(", ")+".":"Appointments belong to: "+names.join(", ")+".";
+ question=allParticipants+"<br><br>"+(kind===0?"They sit in a row facing north.":kind===1?"They live on different floors of a building.":"Each person is scheduled on a different day, Monday onward.")+"<br><br>"+chosen.map(function(x){return x.text;}).join("<br>")+"<br><br>"+subject;
+ return mk(question,answer,distractors,explanation,hardPuzzleTime(diff));
 }
 function hardPuzzleTime(diff){return diff==="Hard"?75:diff==="Moderate"?60:45;}
 
