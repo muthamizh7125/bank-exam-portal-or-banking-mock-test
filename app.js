@@ -206,7 +206,20 @@ function genQ(section,topic,diff,seed){
    ["Which unit measures CPU clock rate?","Hertz",["Pixels per inch","Litres","Decibels"],"Clock rate is expressed in hertz, often gigahertz."],
    ["What does LAN stand for?","Local Area Network",["Large Access Number","Logical Application Node","Linked Account Name"],"A LAN connects devices in a limited area."],
    ["Which is an input device?","Keyboard",["Monitor","Speaker","Projector"],"A keyboard sends input to a computer."],
-   ["In a spreadsheet, what does B4 usually mean?","Column B, row 4",["Workbook 4","Four sheets named B","Row B, column 4"],"Cell references name the column then the row."]
+   ["In a spreadsheet, what does B4 usually mean?","Column B, row 4",["Workbook 4","Four sheets named B","Row B, column 4"],"Cell references name the column then the row."],
+   ["What does CPU stand for?","Central Processing Unit",["Computer Power Utility","Central Program Upload","Control Processing User"],"CPU stands for Central Processing Unit."],
+   ["Which number system uses only the digits 0 and 1?","Binary",["Decimal","Octal","Hexadecimal"],"Binary is base 2 and uses 0 and 1."],
+   ["How many bits are in one byte?","8",["4","16","32"],"A byte contains 8 bits."],
+   ["What does GUI stand for?","Graphical User Interface",["General Utility Internet","Global User Index","Graphic Unit Instruction"],"A GUI lets users interact through visual elements such as windows and icons."],
+   ["Which device is primarily used to produce a hard copy of a document?","Printer",["Scanner","Microphone","Webcam"],"A printer produces physical output on paper."],
+   ["What does USB stand for?","Universal Serial Bus",["Unified System Board","Universal Storage Base","User Signal Bridge"],"USB is Universal Serial Bus."],
+   ["Which application is designed primarily to access and display web pages?","Web browser",["Compiler","Device driver","Disk defragmenter"],"A web browser requests and displays web content."],
+   ["What is the primary purpose of a backup?","Recover data after loss or corruption",["Increase CPU frequency","Guarantee a faster internet connection","Replace antivirus protection"],"Backups provide copies that can be used for recovery."],
+   ["Which of these is a portable non-volatile storage device?","USB flash drive",["CPU register","L1 cache","ALU"],"A USB flash drive retains stored data without power."],
+   ["What does PDF commonly stand for?","Portable Document Format",["Program Data File","Printed Document Folder","Personal Display Function"],"PDF stands for Portable Document Format."],
+   ["Which of these is primarily used to scan and digitise a paper document?","Scanner",["Plotter","Speaker","Router"],"A scanner converts a physical document into digital form."],
+   ["Which component temporarily stores frequently used data to speed up processing?","Cache memory",["Power supply","Optical drive tray","Keyboard controller"],"Cache stores frequently used instructions or data for faster access."]
+
   ];
   var cfChoice=cf;
   if(/operating systems/i.test(topic))cfChoice=[
@@ -685,7 +698,7 @@ function genAdvancedQuant(section,topic,diff,seed,mk){
   var principal=n(5000,hard?50000:25000),rate=p([8,10,12,15]),years=n(2,hard?5:3),ci=principal*(Math.pow(1+rate/100,years)-1),si=principal*rate*years/100;return mk("Find the difference between compound interest and simple interest on ₹"+principal+" at "+rate+"% p.a. for "+years+" years, compounded annually.",Number((ci-si).toFixed(2)),[Number(ci.toFixed(2)),Number(si.toFixed(2)),Number((ci-si+principal*.02).toFixed(2))],"Compound interest = ₹"+ci.toFixed(2)+". Simple interest = ₹"+si.toFixed(2)+". Difference = ₹"+(ci-si).toFixed(2)+".",50);
  }
  if(/time & work|pipes/i.test(topic)){
-  var ad=n(12,hard?45:30),bd=n(15,hard?50:34),days=n(2,7),combined=1/ad+1/bd,completed=days*combined,remaining=Math.max(0,1-completed),extraDays=remaining*bd;return mk("A can complete a job in "+ad+" days and B in "+bd+" days. They work together for "+days+" days, after which A leaves. How many additional days will B need to finish the remaining work?",Number(extraDays.toFixed(2)),[Number((remaining*ad).toFixed(2)),Number((bd-days).toFixed(2)),Number((extraDays+days).toFixed(2))],"Combined daily work = 1/"+ad+" + 1/"+bd+" = "+combined.toFixed(4)+". In "+days+" days they finish "+completed.toFixed(4)+" of the job. Remaining fraction = "+remaining.toFixed(4)+". B alone needs "+extraDays.toFixed(2)+" more days.",50);
+  var ad=n(12,hard?45:30),bd=n(15,hard?50:34),combined=1/ad+1/bd,days=n(2,Math.max(2,Math.floor(1/combined)-1)),completed=days*combined,remaining=Math.max(0,1-completed),extraDays=remaining*bd;return mk("A can complete a job in "+ad+" days and B in "+bd+" days. They work together for "+days+" days, after which A leaves. How many additional days will B need to finish the remaining work?",Number(extraDays.toFixed(2)),[Number((remaining*ad).toFixed(2)),Number((bd-days).toFixed(2)),Number((extraDays+days).toFixed(2))],"Combined daily work = 1/"+ad+" + 1/"+bd+" = "+combined.toFixed(4)+". In "+days+" days they finish "+completed.toFixed(4)+" of the job. Remaining fraction = "+remaining.toFixed(4)+". B alone needs "+extraDays.toFixed(2)+" more days.",50);
  }
  if(/speed|trains|boats/i.test(topic)){
   if(/boats/i.test(topic)||r()<.45){var still=n(10,22),stream=n(2,6),dist=n(80,220),down=still+stream,up=still-stream,td=dist/down,tu=dist/up,delta=tu-td;return mk("A boat covers "+dist+" km downstream and the same distance upstream. Its speed in still water is "+still+" km/h and the stream speed is "+stream+" km/h. How much longer does the upstream trip take?",Number(delta.toFixed(2)),[Number(td.toFixed(2)),Number((tu+td).toFixed(2)),Number((delta+2).toFixed(2))],"Downstream time = "+dist+"/"+down+" = "+td.toFixed(2)+" h. Upstream time = "+dist+"/"+up+" = "+tu.toFixed(2)+" h. Difference = "+delta.toFixed(2)+" h.",50);}
