@@ -1,6 +1,6 @@
 "use strict";
 var $ = function(id){return document.getElementById(id);};
-var STORE={history:"banklab_history_v2",seen:"banklab_seen_v2",seq:"banklab_seq_v2"};
+var STORE={history:"banklab_history_v2",seen:"banklab_seen_v2",seq:"banklab_seq_v2",profile:"banklab_profile_v1"};
 var TOPICS={
  english:["Reading Comprehension","Cloze Test","Para Jumbles","Error Spotting / Error Detection","Sentence Correction / Improvement","Phrase Replacement","Word Swap & Word Usage","Double Fillers / Fill in the Blanks","Idioms and Phrases","Vocabulary & Synonyms","Spelling","Grammar"],
  quant:["Simplification & Approximation","Number Series","Quadratic Equations","Quantity Comparison","Data Interpretation","Tabular DI","Bar Graph DI","Line Graph DI","Pie Chart DI","Caselet DI","Radar DI","Missing DI","Percentage & Average","Ratio & Proportion","Profit, Loss & Discount","Simple & Compound Interest","Time & Work / Pipes & Cisterns","Time, Speed & Distance / Trains / Boats","Mixtures & Alligations","Partnership & Ages","Probability & Permutation-Combination","Mensuration"],
@@ -971,7 +971,55 @@ function showResults(res){$("resultSubtitle").textContent=res.title+" · "+new D
  var tps=Object.entries(res.topicStats).sort(function(a,b){return a[1].correct/Math.max(1,a[1].total)-b[1].correct/Math.max(1,b[1].total);});$("topicAnalysis").innerHTML=tps.slice(0,8).map(function(pair){var t=pair[0],s=pair[1],a=s.correct/Math.max(1,s.total)*100;return '<div><div class="analysis-row-head"><b>'+eh(t)+'</b><span>'+a.toFixed(0)+'% · '+s.correct+'/'+s.total+'</span></div><div class="analysis-bar"><span style="width:'+a+'%;background:'+(a<50?"linear-gradient(90deg,#ff7985,#ffb47a)":"")+'"></span></div><div class="analysis-insight">'+Math.round(s.time/Math.max(1,s.total))+' sec per question · '+s.wrong+' wrong / '+s.skipped+' skipped</div></div>';}).join("");
  var weak=tps.length?tps[0][0]:"Syllogism";$("nextStepsTitle").textContent="Next: practise "+weak+".";$("nextStepsText").textContent="Start at Easy, review each explanation, then attempt a Moderate timed topic set. If accuracy is already high but time is slow, practise solving shortcuts before the next full mock.";$("practiceWeakButton").dataset.topic=weak;renderReview("all");}
 function renderReview(filter){if(!currentResult)return;var qs=currentResult.questions.filter(function(q){var r=currentResult.responses[q.id],ok=r.selected!==null&&r.selected===q.correct_index;if(filter==="wrong")return r.selected!==null&&!ok;if(filter==="skipped")return r.selected===null;if(filter==="correct")return ok;if(filter==="slow")return (r.timeSpent||0)>=60;return true;});$("questionReviewList").innerHTML=qs.slice(0,180).map(function(q){var r=currentResult.responses[q.id],ok=r.selected!==null&&r.selected===q.correct_index,status=r.selected===null?"skipped":ok?"correct":"wrong";return '<article class="review-item"><div class="review-item-top"><span class="review-status '+status+'">'+status+'</span><span class="topic-chip">'+eh(q.topic)+'</span><span class="muted" style="font-size:10px">'+Math.round(r.timeSpent||0)+' sec</span></div><div class="review-question">'+q.question+'</div><div class="review-meta">Your answer: '+(r.selected===null?"Not answered":eh(q.options[r.selected]))+' · Correct: '+eh(q.options[q.correct_index])+'</div><div class="review-explanation">'+eh(q.explanation||"Review this question type and retry a fresh variant.")+'</div></article>';}).join("")||'<p class="muted">No questions match this filter.</p>';}
-function initHistory(){var hist=readStore(STORE.history,[]);$("attemptStat").textContent=hist.length;var c=hist.reduce(function(a,h){return a+(h.correct||0);},0),att=hist.reduce(function(a,h){return a+(h.correct||0)+(h.wrong||0);},0);$("accuracyStat").textContent=att?Math.round(c/att*100)+"%":"—";var topicAgg={};hist.slice(0,20).forEach(function(h){Object.keys(h.topicStats||{}).forEach(function(t){var z=h.topicStats[t],a=topicAgg[t]||(topicAgg[t]={total:0,correct:0});a.total+=z.total||0;a.correct+=z.correct||0;});});$("streakStat").textContent=Object.keys(topicAgg).filter(function(t){return topicAgg[t].total>0&&topicAgg[t].correct/topicAgg[t].total<.7;}).length;renderHistory();}
+function loadProfile(){
+ var profile=readStore(STORE.profile,null);
+ if(!profile||typeof profile!=="object")profile={name:"Muthamizh Kavi",createdAt:Date.now(),performance:{}};
+ if(!String(profile.name||"").trim())profile.name="Muthamizh Kavi";
+ if(!profile.performance||typeof profile.performance!=="object")profile.performance={};
+ writeStore(STORE.profile,profile);
+ return profile;
+}
+function renderProfile(){
+ var profile=loadProfile(),hist=readStore(STORE.history,[]),correct=0,wrong=0,skipped=0,attempted=0,bestPct=0,best=null;
+ hist.forEach(function(h){
+  correct+=Number(h.correct)||0;wrong+=Number(h.wrong)||0;skipped+=Number(h.skip)||0;
+  var att=(Number(h.correct)||0)+(Number(h.wrong)||0);attempted+=att;
+  var pct=Number(h.maxMarks)>0?Number(h.score||0)/Number(h.maxMarks)*100:0;
+  if(!best||pct>bestPct){best=h;bestPct=pct;}
+ });
+ var accuracy=attempted?correct/attempted*100:0;
+ profile.performance={testsCompleted:hist.length,questionsCorrect:correct,questionsWrong:wrong,questionsSkipped:skipped,questionsAttempted:attempted,overallAccuracy:Math.round(accuracy*10)/10,bestScorePercent:Math.round(bestPct*10)/10,bestScore:best?{title:best.title,score:best.score,maxMarks:best.maxMarks,savedAt:best.savedAt}:null,latestTest:hist.length?{title:hist[0].title,score:hist[0].score,maxMarks:hist[0].maxMarks,accuracy:hist[0].accuracy,savedAt:hist[0].savedAt}:null,updatedAt:Date.now()};
+ writeStore(STORE.profile,profile);
+ if(!$("profileName"))return;
+ $("profileName").textContent=profile.name;
+ $("profileAvatar").textContent=profile.name.split(/\s+/).filter(Boolean).slice(0,2).map(function(x){return x.charAt(0).toUpperCase();}).join("")||"MK";
+ $("profileSubtitle").textContent=hist.length?"Your scores update automatically whenever you submit a test.":"Your profile is ready. Complete a mock test and your performance will be saved here.";
+ $("profileTests").textContent=hist.length;
+ $("profileAccuracy").textContent=attempted?Math.round(accuracy)+"%":"—";
+ $("profileBest").textContent=best?Math.round(bestPct)+"%":"—";
+ $("profileCorrect").textContent=correct;
+ $("profileStorageNote").textContent="Stored in this browser · Updated after each submission";
+ var recent=$("profileRecentList");
+ if(!hist.length){recent.innerHTML='<p class="profile-empty">Complete your first mock test to start building your score history.</p>';return;}
+ recent.innerHTML=hist.slice(0,3).map(function(h){var pct=Number(h.maxMarks)>0?Number(h.score||0)/Number(h.maxMarks)*100:0;return '<article class="profile-result-row"><div class="profile-result-main"><b>'+eh(h.title||"BankLab practice")+'</b><small>'+new Date(h.savedAt||Date.now()).toLocaleDateString()+' · '+(Number(h.correct)||0)+' correct · '+(Number(h.wrong)||0)+' incorrect · '+(Number(h.skip)||0)+' skipped</small></div><div class="profile-result-score"><b>'+Number(h.score||0).toFixed(1).replace(/\.0$/,"")+'/'+Number(h.maxMarks||0).toFixed(0)+'</b><span>'+Math.round(pct)+'% score · '+Math.round(Number(h.accuracy)||0)+'% accuracy</span></div></article>';}).join("");
+}
+function editProfileName(){
+ var profile=loadProfile(),newName=window.prompt("Profile name",profile.name);
+ if(newName===null)return;
+ newName=String(newName).trim().replace(/\s+/g," ").slice(0,60);
+ if(!newName){alert("Please enter a name for your profile.");return;}
+ profile.name=newName;writeStore(STORE.profile,profile);renderProfile();
+}
+function initHistory(){
+ var hist=readStore(STORE.history,[]);
+ $("attemptStat").textContent=hist.length;
+ var c=hist.reduce(function(a,h){return a+(h.correct||0);},0),att=hist.reduce(function(a,h){return a+(h.correct||0)+(h.wrong||0);},0);
+ $("accuracyStat").textContent=att?Math.round(c/att*100)+"%":"—";
+ var topicAgg={};
+ hist.slice(0,20).forEach(function(h){Object.keys(h.topicStats||{}).forEach(function(t){var z=h.topicStats[t],a=topicAgg[t]||(topicAgg[t]={total:0,correct:0});a.total+=z.total||0;a.correct+=z.correct||0;});});
+ $("streakStat").textContent=Object.keys(topicAgg).filter(function(t){return topicAgg[t].total>0&&topicAgg[t].correct/topicAgg[t].total<.7;}).length;
+ renderHistory();renderProfile();
+}
 function renderHistory(){var hist=readStore(STORE.history,[]);$("recentSection").hidden=!hist.length;if(!hist.length)return;$("recentList").innerHTML=hist.slice(0,6).map(function(h){return '<article class="recent-card"><b>'+eh(h.title)+'</b><span>'+new Date(h.savedAt).toLocaleDateString()+' · '+Number(h.score).toFixed(1)+'/'+Number(h.maxMarks).toFixed(0)+' · '+Number(h.accuracy).toFixed(0)+'% accuracy</span></article>';}).join("");}
 function startTopicDirect(topic,section){
  showScreen("lobby");
@@ -997,7 +1045,7 @@ function init(){
  selectedProfile=PROFILES[$("examSelect").value];updateMode();initHistory();showScreen("lobby");
  $("examSelect").addEventListener("change",updateMode);$("stageSelect").addEventListener("change",updateMode);$("questionCount").addEventListener("change",updatePattern);$("difficultySelect").addEventListener("change",updatePattern);$("timerMode").addEventListener("change",updatePattern);$("sectionSelect").addEventListener("change",function(){updateTopics();updatePattern();});document.querySelectorAll('input[name="practiceMode"]').forEach(function(el){el.addEventListener("change",updateMode);});
  $("startButton").addEventListener("click",launchTest);$("startWeakTopic").addEventListener("click",function(){var hist=readStore(STORE.history,[]),weak=null;if(hist.length){var tps=[];hist.slice(0,5).forEach(function(h){Object.keys(h.topicStats||{}).forEach(function(t){var z=h.topicStats[t];tps.push({topic:t,acc:(z.correct||0)/Math.max(1,z.total||0)});});});tps.sort(function(a,b){return a.acc-b.acc;});weak=tps[0]&&tps[0].topic;}startTopicDirect(weak||"Syllogism");});
- $("historyButton").addEventListener("click",function(){if($("recentSection").hidden){alert("Complete a test to build your progress history.");return;}$("recentSection").scrollIntoView({behavior:"smooth"});});
+ $("historyButton").addEventListener("click",function(){if($("recentSection").hidden){alert("Complete a test to build your progress history.");return;}$("recentSection").scrollIntoView({behavior:"smooth"});$("editProfileName").addEventListener("click",editProfileName);});
  $("brandHome").addEventListener("click",function(e){e.preventDefault();if(!$("examScreen").hidden&&!confirm("Leave this attempt? It will not be saved as a completed test."))return;if(tickHandle)clearInterval(tickHandle);showScreen("lobby");initHistory();});
  $("backToLobby").addEventListener("click",function(){if(confirm("Exit this attempt? The score won't be added to completed history.")){if(tickHandle)clearInterval(tickHandle);showScreen("lobby");initHistory();}});
  $("pauseButton").addEventListener("click",pauseToggle);$("resumeButton").addEventListener("click",pauseToggle);$("showSolutionButton").addEventListener("click",revealSolution);$("prevButton").addEventListener("click",prevQ);$("nextButton").addEventListener("click",nextQ);$("markButton").addEventListener("click",toggleMark);$("clearButton").addEventListener("click",clearAnswer);$("submitButton").addEventListener("click",openSubmit);$("cancelConfirm").addEventListener("click",function(){$("confirmModal").hidden=true;});$("confirmSubmit").addEventListener("click",submitNow);
