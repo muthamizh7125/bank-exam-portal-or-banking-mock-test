@@ -66,7 +66,7 @@ function genQ(section,topic,diff,seed){
  if(section==="quant"||section==="data"){
   if(/simplification|approximation/i.test(topic)){
    if(/approximation/i.test(topic)){
-    var ap=pick(r,[{q:"(799.6 ÷ 19.9) × 24.8 + 48.9",a:1050,rule:"800 ÷ 20 × 25 + 50 ≈ 1,050"},{q:"(1,248 ÷ 31.2) × 18.9 − 52.1",a:800,rule:"1,250 ÷ 30 × 20 − 50 ≈ 783, nearest option 800"},{q:"(1,598 ÷ 39.8) × 15.2 + 61.1",a:650,rule:"1,600 ÷ 40 × 15 + 50 = 650"}]);
+    var ap=pick(r,[{q:"(799.6 ÷ 19.9) × 24.8 + 48.9",a:1050,rule:"800 ÷ 20 × 25 + 50 ≈ 1,050"},{q:"(1,248 ÷ 31.2) × 18.9 − 52.1",a:700,rule:"1,250 ÷ 31 × 19 − 50 ≈ 716, nearest option 700"},{q:"(1,598 ÷ 39.8) × 15.2 + 61.1",a:650,rule:"1,600 ÷ 40 × 15 + 50 = 650"}]);
     return mk("Approximate: "+ap.q+" = ?",ap.a,[ap.a+50,Math.max(1,ap.a-50),ap.a+100],"Round to convenient values: "+ap.rule+".",25);
    }
    var ex=pick(r,diff==="Hard"?[{q:"(35% of 840) + (5/8 of 640) − √625 × 4",a:594,e:"35% of 840 = 294; 5/8 of 640 = 400; √625 × 4 = 100. Result = 594."},{q:"18² ÷ 9 + 32% of 750 − 3³",a:249,e:"18² ÷ 9 = 36; 32% of 750 = 240; 3³ = 27. Result = 249."},{q:"(7/12 of 864) ÷ 7 + 45% of 360",a:234,e:"7/12 of 864 = 504; 504 ÷ 7 = 72; 45% of 360 = 162. Result = 234."}]:[{q:"(48% of 625) + (7/9 of 729) − √1296",a:831,e:"48% of 625 = 300; 7/9 of 729 = 567; √1296 = 36. Result = 831."},{q:"√2025 + 28% of 850 − 3² × 7",a:220,e:"√2025 = 45; 28% of 850 = 238; 3² × 7 = 63. Result = 220."},{q:"(25% of 640) + (3/5 of 450) − √400",a:410,e:"25% of 640 = 160; 3/5 of 450 = 270; √400 = 20. Result = 410."}]);
