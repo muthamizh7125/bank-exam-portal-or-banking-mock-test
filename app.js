@@ -44,6 +44,7 @@ function updatePattern(){var p=PROFILES[$("examSelect").value],stage=$("stageSel
  if(selectedMode==="full")desc=count+" questions · "+mins+" minutes"+(p.compositePrelims&&stage==="prelims"?" · composite timer":" · separately timed sections");
  else if(selectedMode==="section"){var s=secs[Number($("sectionSelect").value)||0];desc=s.count+" questions · "+s.minutes+" minutes · one complete section";}
  else desc=$("questionCount").value+" questions · "+$("difficultySelect").value+" · "+($("timerMode").value==="untimed"?"untimed practice":"timed topic drill");
+ if(selectedMode==="full"&&stage==="mains"&&( $("examSelect").value==="sbi-po"||$("examSelect").value==="ibps-po"))desc+=" · objective section simulation; descriptive writing is not included yet";
  $("patternTitle").textContent=title;$("patternDescription").textContent=desc;
 }
 function renderPaperOptions(){$("paperSelectLobby").innerHTML=Array.from({length:50},function(_,i){return '<option value="'+(i+1)+'">Mock Paper '+String(i+1).padStart(2,"0")+'</option>';}).join("");}
@@ -167,6 +168,7 @@ function launchTest(){
    if(/topic practice|section mock|full mock/.test(q.title||"")){}items.push(q);
   }
  });
+ chosen.forEach(function(sec){var secItems=items.filter(function(q){return q.section===sec.id;});var average=sec.marks/sec.count;var base=average>=1?Math.floor(average):average;var extra=average>=1?sec.marks-base*sec.count:0;secItems.forEach(function(q,j){q.marks=average>=1?base+(j<extra?1:0):average;q.negative_mark=q.marks*.25;});});
  writeStore(STORE.seen,Array.from(used).slice(-15000));
  activeTest={exam:exam,stage:stage,mode:mode,profile:prof,sections:chosen,allProfileSections:all,paperNo:paperNo,topic:topic,seed:baseSeed,questions:items,title:mode==="full"?prof.name+" · "+(stage==="prelims"?"Prelims":"Mains")+" · Mock "+String(paperNo).padStart(2,"0"):mode==="section"?prof.name+" · "+section.name+" Sectional Mock":prof.name+" · "+topic+" Practice",untimed:mode==="topic"&&$("timerMode").value==="untimed",composite:!!prof.compositePrelims&&stage==="prelims"&&mode==="full",separatelyTimed:!(!!prof.compositePrelims&&stage==="prelims"&&mode==="full")};
  responses={};items.forEach(function(q){responses[q.id]={selected:null,marked:false,timeSpent:0,visited:false};});sectionIndex=0;questionIndex=0;questionSeconds=0;paused=false;answerChecked=false;renderTestSetup();showScreen("exam");enterSection(0);window.scrollTo(0,0);
