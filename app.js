@@ -17,6 +17,7 @@ var PROFILES={
  "rrb-office":{name:"RRB Office Assistant",prelims:[{id:"reasoning",name:"Reasoning Ability",count:40,marks:40,minutes:25},{id:"quant",name:"Numerical Ability",count:40,marks:40,minutes:20}],mains:[{id:"reasoning",name:"Reasoning Ability",count:40,marks:50,minutes:30},{id:"computer",name:"Computer Knowledge",count:40,marks:20,minutes:15},{id:"awareness",name:"General Awareness",count:40,marks:40,minutes:15},{id:"english",name:"English Language",count:40,marks:40,minutes:30},{id:"quant",name:"Numerical Ability",count:40,marks:50,minutes:30}],compositePrelims:true},
  "rrb-officer":{name:"RRB Officer Scale I",prelims:[{id:"reasoning",name:"Reasoning Ability",count:40,marks:40,minutes:25},{id:"quant",name:"Quantitative Aptitude",count:40,marks:40,minutes:20}],mains:[{id:"reasoning",name:"Reasoning Ability",count:40,marks:50,minutes:30},{id:"computer",name:"Computer Knowledge",count:40,marks:20,minutes:15},{id:"awareness",name:"General Awareness",count:40,marks:40,minutes:15},{id:"english",name:"English Language",count:40,marks:40,minutes:30},{id:"quant",name:"Quantitative Aptitude",count:40,marks:50,minutes:30}]}
 };
+PROFILES["rrb-officer"].compositePrelims=true;
 var baseBank=[],activeTest=null,responses={},sectionIndex=0,questionIndex=0,sectionRemaining=0,overallRemaining=0,questionSeconds=0,tickHandle=null,paused=false,answerChecked=false,currentResult=null,selectedMode="full",selectedProfile=null;
 
 function readStore(k,d){try{var x=JSON.parse(localStorage.getItem(k));return x===null||x===undefined?d:x;}catch(e){return d;}}
@@ -211,7 +212,24 @@ function showResults(res){$("resultSubtitle").textContent=res.title+" · "+new D
 function renderReview(filter){if(!currentResult)return;var qs=currentResult.questions.filter(function(q){var r=currentResult.responses[q.id],ok=r.selected!==null&&r.selected===q.correct_index;if(filter==="wrong")return r.selected!==null&&!ok;if(filter==="skipped")return r.selected===null;if(filter==="correct")return ok;if(filter==="slow")return (r.timeSpent||0)>=60;return true;});$("questionReviewList").innerHTML=qs.slice(0,180).map(function(q){var r=currentResult.responses[q.id],ok=r.selected!==null&&r.selected===q.correct_index,status=r.selected===null?"skipped":ok?"correct":"wrong";return '<article class="review-item"><div class="review-item-top"><span class="review-status '+status+'">'+status+'</span><span class="topic-chip">'+eh(q.topic)+'</span><span class="muted" style="font-size:10px">'+Math.round(r.timeSpent||0)+' sec</span></div><div class="review-question">'+q.question+'</div><div class="review-meta">Your answer: '+(r.selected===null?"Not answered":eh(q.options[r.selected]))+' · Correct: '+eh(q.options[q.correct_index])+'</div><div class="review-explanation">'+eh(q.explanation||"Review this question type and retry a fresh variant.")+'</div></article>';}).join("")||'<p class="muted">No questions match this filter.</p>';}
 function initHistory(){var hist=readStore(STORE.history,[]);$("attemptStat").textContent=hist.length;var c=hist.reduce(function(a,h){return a+(h.correct||0);},0),att=hist.reduce(function(a,h){return a+(h.correct||0)+(h.wrong||0);},0);$("accuracyStat").textContent=att?Math.round(c/att*100)+"%":"—";var topicAgg={};hist.slice(0,20).forEach(function(h){Object.keys(h.topicStats||{}).forEach(function(t){var z=h.topicStats[t],a=topicAgg[t]||(topicAgg[t]={total:0,correct:0});a.total+=z.total||0;a.correct+=z.correct||0;});});$("streakStat").textContent=Object.keys(topicAgg).filter(function(t){return topicAgg[t].total>0&&topicAgg[t].correct/topicAgg[t].total<.7;}).length;renderHistory();}
 function renderHistory(){var hist=readStore(STORE.history,[]);$("recentSection").hidden=!hist.length;if(!hist.length)return;$("recentList").innerHTML=hist.slice(0,6).map(function(h){return '<article class="recent-card"><b>'+eh(h.title)+'</b><span>'+new Date(h.savedAt).toLocaleDateString()+' · '+Number(h.score).toFixed(1)+'/'+Number(h.maxMarks).toFixed(0)+' · '+Number(h.accuracy).toFixed(0)+'% accuracy</span></article>';}).join("");}
-function startTopicDirect(topic,section){showScreen("lobby");var mode=document.querySelector('input[name="practiceMode"][value="topic"]');mode.checked=true;$("examSelect").value="sbi-clerk";$("stageSelect").value="prelims";updateMode();var target=section||groupTopic(topic),idx=selectedProfile.prelims.findIndex(function(s){return s.id===target;});if(idx<0)idx=target==="data"?1:target==="computer"?2:0;$("sectionSelect").value=String(idx);updateTopics();var exact=[].slice.call($("topicSelect").options).find(function(o){return o.value===topic;});if(!exact)exact=[].slice.call($("topicSelect").options).find(function(o){return o.value.toLowerCase().indexOf(topic.toLowerCase().split(" ")[0])>=0;});if(exact)$("topicSelect").value=exact.value;$("difficultySelect").value="Easy";$("questionCount").value="20";$("timerMode").value="timed";updatePattern();window.scrollTo({top:0,behavior:"smooth"});}
+function startTopicDirect(topic,section){
+ showScreen("lobby");
+ var mode=document.querySelector('input[name="practiceMode"][value="topic"]');mode.checked=true;
+ var target=section||groupTopic(topic),exam="sbi-clerk",stage="prelims";
+ if(target==="awareness"||target==="computer"||target==="reasonComp")stage="mains";
+ if(target==="data"){exam="sbi-po";stage="mains";}
+ $("examSelect").value=exam;$("stageSelect").value=stage;updateMode();
+ var targetSection=target==="computer"?"reasonComp":target;
+ var list=selectedProfile[stage],idx=list.findIndex(function(x){return x.id===targetSection;});
+ if(idx<0)idx=0;
+ $("sectionSelect").value=String(idx);updateTopics();
+ var options=[].slice.call($("topicSelect").options);
+ var exact=options.find(function(o){return o.value.toLowerCase()===String(topic).toLowerCase();});
+ if(!exact){var first=String(topic).toLowerCase().split(" ")[0];exact=options.find(function(o){return o.value.toLowerCase().indexOf(first)>=0;});}
+ if(exact)$("topicSelect").value=exact.value;
+ $("difficultySelect").value="Easy";$("questionCount").value="20";$("timerMode").value="timed";updatePattern();
+ window.scrollTo({top:0,behavior:"smooth"});
+}
 function init(){
  renderPaperOptions();
  fetch("questions_bank.json").then(function(r){if(!r.ok)throw new Error("question bank not available");return r.json();}).then(function(d){baseBank=Object.keys(d||{}).reduce(function(a,k){return a.concat(d[k].questions||[]);},[]);}).catch(function(){baseBank=[];});
