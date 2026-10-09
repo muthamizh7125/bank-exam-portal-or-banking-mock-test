@@ -53,7 +53,10 @@ function getSecQs(sec){return activeTest.questions.filter(function(q){return q.s
 function fingerprintSeen(){return new Set(readStore(STORE.seen,[]));}
 function pickLevel(i,count,r){var part=i/Math.max(1,count);if(part<.25)return "Easy";if(part<.72)return "Moderate";return r()<.6?"Moderate":"Hard";}
 function sectionQuestion(sec,topic,diff,seed,qtext,answer,wrong,explain,bench){
- var rr=rng(seed^0x9e3779b9),opts=[String(answer)];wrong.forEach(function(x){if(!opts.includes(String(x)))opts.push(String(x));});var j=1;while(opts.length<4){var alt=String(Number(answer)+j*7);if(!opts.includes(alt))opts.push(alt);j++;}opts=opts.slice(0,4);for(var i=opts.length-1;i>0;i--){var k=ri(rr,0,i);var z=opts[i];opts[i]=opts[k];opts[k]=z;}
+ var rr=rng(seed^0x9e3779b9),opts=[String(answer)];wrong.forEach(function(x){if(!opts.includes(String(x)))opts.push(String(x));});
+ var j=1,guard=0,num=Number(answer);while(opts.length<4&&guard<50){var alt=Number.isFinite(num)?String(num+j*7):"Alternative "+String.fromCharCode(65+opts.length);if(!opts.includes(alt))opts.push(alt);j++;guard++;}
+ var letters=["Option A","Option B","Option C","Option D"];while(opts.length<4){var filler=letters.find(function(x){return !opts.includes(x);});if(!filler)break;opts.push(filler);}
+ opts=opts.slice(0,4);for(var i=opts.length-1;i>0;i--){var k=ri(rr,0,i);var z=opts[i];opts[i]=opts[k];opts[k]=z;}
  return {id:"BL_"+hash(topic+"|"+seed).toString(36)+"_"+seed,section:sec.id,section_name:sec.name,topic:topic,difficulty:diff,question:qtext,options:opts,correct_index:opts.indexOf(String(answer)),explanation:explain,benchmark_seconds:bench||40,marks:sec.marks/sec.count,negative_mark:(sec.marks/sec.count)*.25};
 }
 function genQ(section,topic,diff,seed){
