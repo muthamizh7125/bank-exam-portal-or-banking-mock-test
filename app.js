@@ -1,673 +1,228 @@
-// BankExamPro Client Logic
-let PAPERS = null;
-let currentPaperId = "paper_1";
-let currentPaper = null;
-let currentSectionKey = "english";
-let currentQIndex = 0;
-let strictMode = true;
-
-let sectionalTimeLimit = 20 * 60;
-let remainingSectionSeconds = sectionalTimeLimit;
-let timerInterval = null;
-let qTimerInterval = null;
-let userResponses = {};
-
-const SECTIONS_CONFIG = [
-  { key: "english", name: "English Language", count: 30, startIndex: 0 },
-  { key: "quant", name: "Quantitative Aptitude", count: 35, startIndex: 30 },
-  { key: "reasoning", name: "Reasoning Ability", count: 35, startIndex: 65 }
-];
-
-window.onload = function() {
-  if (typeof EMBEDDED_PAPERS !== "undefined") {
-    PAPERS = EMBEDDED_PAPERS;
-    initApp();
-  } else {
-    fetch("questions_bank.json")
-      .then(res => res.json())
-      .then(data => {
-        PAPERS = data;
-        initApp();
-      })
-      .catch(err => {
-        console.error("Error loading questions_bank.json, using fallback", err);
-      });
-  }
+"use strict";
+var $ = function(id){return document.getElementById(id);};
+var STORE={history:"banklab_history_v2",seen:"banklab_seen_v2",seq:"banklab_seq_v2"};
+var TOPICS={
+ english:["Reading Comprehension","Cloze Test","Para Jumbles","Error Spotting / Error Detection","Sentence Correction / Improvement","Phrase Replacement","Word Swap & Word Usage","Double Fillers / Fill in the Blanks","Idioms and Phrases","Vocabulary & Synonyms","Spelling","Grammar"],
+ quant:["Simplification & Approximation","Number Series","Quadratic Equations","Quantity Comparison","Data Interpretation","Percentage & Average","Ratio & Proportion","Profit, Loss & Discount","Simple & Compound Interest","Time & Work / Pipes & Cisterns","Time, Speed & Distance / Trains / Boats","Mixtures & Alligations","Partnership & Ages","Probability & Permutation-Combination","Mensuration"],
+ reasoning:["Seating Arrangements","Puzzles (Floor / Box / Scheduling)","Syllogism","Inequalities","Coding-Decoding","Blood Relations","Direction & Distance","Order & Ranking","Alphanumeric & Number Series","Data Sufficiency","Logical Reasoning","Only a Few Syllogism"],
+ awareness:["Banking & Financial Awareness","RBI & Monetary Policy","Government Schemes","Economy & Reports","Static GK","Current Affairs Revision"],
+ computer:["Computer Fundamentals","Operating Systems","Hardware & Software","Networking & Internet","MS Office & Shortcuts","Database Basics","Cybersecurity"],
+ data:["Tabular DI","Bar Graph DI","Line Graph DI","Pie Chart DI","Caselet DI","Missing DI","Radar DI","Data Sufficiency"]
 };
+var PROFILES={
+ "sbi-clerk":{name:"SBI Junior Associate (Clerk)",prelims:[{id:"english",name:"English Language",count:30,marks:30,minutes:20},{id:"quant",name:"Numerical Ability",count:35,marks:35,minutes:20},{id:"reasoning",name:"Reasoning Ability",count:35,marks:35,minutes:20}],mains:[{id:"awareness",name:"General / Financial Awareness",count:50,marks:50,minutes:35},{id:"english",name:"General English",count:40,marks:40,minutes:35},{id:"quant",name:"Quantitative Aptitude",count:50,marks:50,minutes:45},{id:"reasonComp",name:"Reasoning & Computer Aptitude",count:50,marks:60,minutes:45}]},
+ "sbi-po":{name:"SBI PO",prelims:[{id:"english",name:"English Language",count:40,marks:40,minutes:20},{id:"quant",name:"Quantitative Aptitude",count:30,marks:30,minutes:20},{id:"reasoning",name:"Reasoning Ability",count:30,marks:30,minutes:20}],mains:[{id:"reasonComp",name:"Reasoning & Computer Aptitude",count:40,marks:60,minutes:50},{id:"data",name:"Data Analysis & Interpretation",count:30,marks:60,minutes:45},{id:"awareness",name:"General / Economy / Banking Awareness",count:60,marks:60,minutes:45},{id:"english",name:"English Language",count:40,marks:20,minutes:40}]},
+ "ibps-clerk":{name:"IBPS Customer Service Associate (Clerk)",prelims:[{id:"english",name:"English Language",count:30,marks:30,minutes:20},{id:"quant",name:"Numerical Ability",count:35,marks:35,minutes:20},{id:"reasoning",name:"Reasoning Ability",count:35,marks:35,minutes:20}],mains:[{id:"awareness",name:"General / Financial Awareness",count:40,marks:50,minutes:20},{id:"english",name:"General English",count:40,marks:40,minutes:35},{id:"reasoning",name:"Reasoning Ability",count:40,marks:60,minutes:35},{id:"quant",name:"Quantitative Aptitude",count:40,marks:50,minutes:35}]},
+ "ibps-po":{name:"IBPS PO",prelims:[{id:"english",name:"English Language",count:30,marks:30,minutes:20},{id:"quant",name:"Quantitative Aptitude",count:35,marks:35,minutes:20},{id:"reasoning",name:"Reasoning Ability",count:35,marks:35,minutes:20}],mains:[{id:"reasoning",name:"Reasoning Ability",count:40,marks:60,minutes:50},{id:"awareness",name:"General / Economy / Banking Awareness",count:35,marks:50,minutes:25},{id:"english",name:"English Language",count:35,marks:40,minutes:40},{id:"data",name:"Data Analysis & Interpretation",count:35,marks:50,minutes:45}]},
+ "rrb-office":{name:"RRB Office Assistant",prelims:[{id:"reasoning",name:"Reasoning Ability",count:40,marks:40,minutes:25},{id:"quant",name:"Numerical Ability",count:40,marks:40,minutes:20}],mains:[{id:"reasoning",name:"Reasoning Ability",count:40,marks:50,minutes:30},{id:"computer",name:"Computer Knowledge",count:40,marks:20,minutes:15},{id:"awareness",name:"General Awareness",count:40,marks:40,minutes:15},{id:"english",name:"English Language",count:40,marks:40,minutes:30},{id:"quant",name:"Numerical Ability",count:40,marks:50,minutes:30}],compositePrelims:true},
+ "rrb-officer":{name:"RRB Officer Scale I",prelims:[{id:"reasoning",name:"Reasoning Ability",count:40,marks:40,minutes:25},{id:"quant",name:"Quantitative Aptitude",count:40,marks:40,minutes:20}],mains:[{id:"reasoning",name:"Reasoning Ability",count:40,marks:50,minutes:30},{id:"computer",name:"Computer Knowledge",count:40,marks:20,minutes:15},{id:"awareness",name:"General Awareness",count:40,marks:40,minutes:15},{id:"english",name:"English Language",count:40,marks:40,minutes:30},{id:"quant",name:"Quantitative Aptitude",count:40,marks:50,minutes:30}]}
+};
+var baseBank=[],activeTest=null,responses={},sectionIndex=0,questionIndex=0,sectionRemaining=0,overallRemaining=0,questionSeconds=0,tickHandle=null,paused=false,answerChecked=false,currentResult=null,selectedMode="full",selectedProfile=null;
 
-function initApp() {
-  populatePaperDropdown();
-  loadPaper("paper_1");
+function readStore(k,d){try{var x=JSON.parse(localStorage.getItem(k));return x===null||x===undefined?d:x;}catch(e){return d;}}
+function writeStore(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function strip(s){return String(s||"").replace(/<[^>]*>/g," ").replace(/&nbsp;/g," ").replace(/\s+/g," ").trim().toLowerCase();}
+function fp(q){return strip(q.question)+"|"+(q.options||[]).map(strip).sort().join("|")+"|"+String(q.topic||"").toLowerCase();}
+function hash(s){var h=2166136261;for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function rng(seed){var a=(seed>>>0)||1;return function(){a=(Math.imul(a,1664525)+1013904223)>>>0;return a/4294967296;};}
+function ri(r,a,b){return Math.floor(r()*(b-a+1))+a;}
+function pick(r,a){return a[ri(r,0,a.length-1)];}
+function eh(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
+function fmt(n){return Number(n).toLocaleString("en-IN",{maximumFractionDigits:2});}
+function labelSection(id){return {english:"English Language",quant:"Quantitative Aptitude",reasoning:"Reasoning Ability",reasonComp:"Reasoning & Computer Aptitude",awareness:"General / Financial Awareness",computer:"Computer Knowledge",data:"Data Analysis & Interpretation"}[id]||id;}
+function topicsFor(id){if(id==="reasonComp")return TOPICS.reasoning.concat(TOPICS.computer);if(id==="data")return TOPICS.data;return TOPICS[id]||TOPICS.reasoning;}
+function groupTopic(t){t=String(t).toLowerCase();if(/rbi|banking|financial awareness|government schemes|economy|reports|static gk|current affairs/.test(t))return "awareness";if(/computer|operating systems|hardware|network|office|database|cybersecurity/.test(t))return "computer";if(/data interpretation|tabular di|bar graph|line graph|pie chart|caselet|missing di|radar di/.test(t))return "data";if(/reading comprehension|cloze|para jumble|error|sentence correction|phrase replacement|word swap|fillers|idioms|vocabulary|spelling|grammar/.test(t))return "english";if(/simplification|approximation|quadratic|quantity comparison|percentage|average|ratio|profit|interest|work|pipes|speed|boats|mixtures|partnership|ages|probability|permutation|mensuration/.test(t))return "quant";return "reasoning";}
+function modeValue(){return document.querySelector('input[name="practiceMode"]:checked').value;}
+function updateMode(){
+ selectedMode=modeValue();selectedProfile=PROFILES[$("examSelect").value];var secs=selectedProfile[$("stageSelect").value];
+ $("sectionField").hidden=selectedMode==="full";$("topicField").hidden=selectedMode!=="topic";$("difficultyField").hidden=selectedMode==="full";$("paperField").hidden=selectedMode!=="full";$("countField").hidden=selectedMode!=="topic";$("timerModeField").hidden=selectedMode!=="topic";
+ $("sectionSelect").innerHTML=secs.map(function(s,i){return '<option value="'+i+'">'+eh(s.name)+' ('+s.count+' questions)</option>';}).join("");
+ updateTopics();document.querySelectorAll(".mode-option").forEach(function(el){el.classList.toggle("selected",el.querySelector("input").checked);});updatePattern();
 }
-
-function populatePaperDropdown() {
-  const select = document.getElementById("paperSelect");
-  select.innerHTML = "";
-  for (let key in PAPERS) {
-    const opt = document.createElement("option");
-    opt.value = key;
-    opt.textContent = `${PAPERS[key].title} (${PAPERS[key].difficulty})`;
-    select.appendChild(opt);
+function updateTopics(){var p=PROFILES[$("examSelect").value],sec=p[$("stageSelect").value][Number($("sectionSelect").value)||0];var opts=topicsFor(sec?sec.id:"reasoning");$("topicSelect").innerHTML=opts.map(function(t){return '<option value="'+eh(t)+'">'+eh(t)+'</option>';}).join("");}
+function updatePattern(){var p=PROFILES[$("examSelect").value],stage=$("stageSelect").value,secs=p[stage],count=secs.reduce(function(a,s){return a+s.count;},0),mins=secs.reduce(function(a,s){return a+s.minutes;},0),title=p.name+" "+(stage==="prelims"?"Prelims":"Mains"),desc;
+ if(selectedMode==="full")desc=count+" questions · "+mins+" minutes"+(p.compositePrelims&&stage==="prelims"?" · composite timer":" · separately timed sections");
+ else if(selectedMode==="section"){var s=secs[Number($("sectionSelect").value)||0];desc=s.count+" questions · "+s.minutes+" minutes · one complete section";}
+ else desc=$("questionCount").value+" questions · "+$("difficultySelect").value+" · "+($("timerMode").value==="untimed"?"untimed practice":"timed topic drill");
+ $("patternTitle").textContent=title;$("patternDescription").textContent=desc;
+}
+function renderPaperOptions(){$("paperSelectLobby").innerHTML=Array.from({length:50},function(_,i){return '<option value="'+(i+1)+'">Mock Paper '+String(i+1).padStart(2,"0")+'</option>';}).join("");}
+function getSecQs(sec){return activeTest.questions.filter(function(q){return q.section===sec.id;});}
+function fingerprintSeen(){return new Set(readStore(STORE.seen,[]));}
+function pickLevel(i,count,r){var part=i/Math.max(1,count);if(part<.25)return "Easy";if(part<.72)return "Moderate";return r()<.6?"Moderate":"Hard";}
+function sectionQuestion(sec,topic,diff,seed,qtext,answer,wrong,explain,bench){
+ var rr=rng(seed^0x9e3779b9),opts=[String(answer)];wrong.forEach(function(x){if(!opts.includes(String(x)))opts.push(String(x));});var j=1;while(opts.length<4){var alt=String(Number(answer)+j*7);if(!opts.includes(alt))opts.push(alt);j++;}opts=opts.slice(0,4);for(var i=opts.length-1;i>0;i--){var k=ri(rr,0,i);var z=opts[i];opts[i]=opts[k];opts[k]=z;}
+ return {id:"BL_"+hash(topic+"|"+seed).toString(36)+"_"+seed,section:sec.id,section_name:sec.name,topic:topic,difficulty:diff,question:qtext,options:opts,correct_index:opts.indexOf(String(answer)),explanation:explain,benchmark_seconds:bench||40,marks:sec.marks/sec.count,negative_mark:(sec.marks/sec.count)*.25};
+}
+function genQ(section,topic,diff,seed){
+ var r=rng(seed),n=function(a,b){return ri(r,a,b);},p=function(a){return pick(r,a);},mk=function(q,a,w,e,b){return sectionQuestion({id:section,name:labelSection(section),marks:1,count:1},topic,diff,seed,q,a,w,e,b);},letters=["A","B","C","D","E","F","G","H","J","K","L","M","N","P","Q","R","S","T","V","W"];
+ if(section==="reasonComp"&&/computer|network|database|software|hardware|operating|office|cyber/i.test(topic))section="computer";
+ if(section==="quant"||section==="data"){
+  if(/simplification|approximation/i.test(topic)){var a=n(12,90),b=n(4,25),c=n(15,180);if(/approximation/i.test(topic)){var x=n(121,980),y=n(4,35),z=n(12,87),v=Math.round(x/y+z);return mk("Approximate the value: "+x+" ÷ "+y+" + "+z+" = ?",v,[v+5,v-7,v+12],"Round the division first, then add "+z+". The nearest whole-number estimate is "+v+".",20);}var ans=a*b+c;return mk("Simplify: ("+a+" × "+b+") + "+c+" = ?",ans,[ans+Math.max(5,b),ans-(c%19+1),ans+(c%27+3)],"Multiply first: "+a+" × "+b+" = "+(a*b); then add "+c+" to get "+ans+".",20);}
+  if(/number series/i.test(topic)){var first=n(3,45),d=n(2,12),st=n(1,5),arr=[first];for(var t=0;t<5;t++)arr.push(arr[t]+d+t*st);var next=arr[5]+d+5*st;return mk("Find the missing number: "+arr.slice(0,5).join(", ")+", ?",next,[next+d,next-st,next+2*st],"The differences increase by "+st+" each time. The next difference is "+(d+5*st)+".",25);}
+  if(/quadratic/i.test(topic)){var x1=n(2,18),x2=n(1,Math.max(1,x1-1)),big=Math.max(x1,x2),sum=x1+x2,prod=x1*x2;return mk("Find the larger root of x² − "+sum+"x + "+prod+" = 0.",big,[big+2,big-1,big+4],"Factor the equation as (x − "+x1+")(x − "+x2+") = 0. The larger root is "+big+".",25);}
+  if(/quantity comparison/i.test(topic)){var qa=n(12,120),qb=n(2,15),qc=n(10,100),v1=qa*qb,v2=qc+qb*5,rel=v1>v2?"Quantity I is greater":v1<v2?"Quantity II is greater":"Both quantities are equal";return mk("Compare: Quantity I = "+qa+" × "+qb+"; Quantity II = "+qc+" + (5 × "+qb+").",rel,["Quantity I is greater","Quantity II is greater","Both quantities are equal","Relationship cannot be established"].filter(function(z){return z!==rel;}).slice(0,3),"Quantity I = "+v1+" and Quantity II = "+v2+".",30);}
+  if(/data interpretation|tabular di|bar graph|line graph|pie chart|caselet|missing di|radar di/i.test(topic)){var A=n(40,220),B=n(40,240),C=n(35,180),D=n(25,160),which=n(0,2),answer=which===0?A+B:which===1?Math.abs(A-B):Math.round(A/(A+B)*100);var tbl='<table><tr><th>Branch</th><th>Deposits (₹ lakh)</th></tr><tr><td>North</td><td>'+A+'</td></tr><tr><td>South</td><td>'+B+'</td></tr><tr><td>East</td><td>'+C+'</td></tr><tr><td>West</td><td>'+D+'</td></tr></table>';var ques=which===0?"What is the combined deposit of North and South?":which===1?"What is the difference between the North and South deposits?":"What percentage of the North and South total is contributed by North (nearest whole %)?";return mk(tbl+ques,answer,[Math.max(1,answer+7),Math.max(1,answer-4),Math.max(1,answer+15)],which===0?A+" + "+B+" = "+answer+" lakh.":which===1?"Difference = |"+A+" − "+B+"| = "+answer+" lakh.":"North share = "+A+"/("+A+"+"+B+") × 100 ≈ "+answer+"%.",45);}
+  if(/percentage & average|percentage|average/i.test(topic)){if(r()<.5){var pc=p([10,12,15,20,25,30,35,40,45]),base=n(80,900),ans2=base*pc/100;return mk("What is "+pc+"% of "+base+"?",fmt(ans2),[fmt(ans2+pc),fmt(ans2-pc),fmt(ans2*2)],pc+"% = "+pc+"/100, so "+base+" × "+pc+"/100 = "+fmt(ans2)+".",25);}var vals=[n(15,100),n(15,100),n(15,100),n(15,100)],avg=Math.round(vals.reduce(function(s,v){return s+v;},0)/4);return mk("Find the average of "+vals.join(", ")+".",avg,[avg+2,avg-3,avg+5],"Sum = "+vals.reduce(function(s,v){return s+v;},0)+"; divide by 4 to obtain "+avg+".",30);}
+  if(/ratio & proportion/i.test(topic)){var ra=n(2,9),rb=n(3,12),tot=(ra+rb)*n(8,24),share=tot*ra/(ra+rb);return mk("₹"+tot+" is divided in the ratio "+ra+":"+rb+". What is the first share?",fmt(share),[fmt(share+ra+rb),fmt(share-ra),fmt(tot*rb/(ra+rb))],"Total parts = "+(ra+rb)+". First share = "+ra+"/"+(ra+rb)+" × "+tot+" = ₹"+fmt(share)+".",35);}
+  if(/profit|loss|discount/i.test(topic)){var cp=n(180,1800),pct=p([10,12,15,20,25,30]),sp=cp*(100+pct)/100;return mk("An item costs ₹"+cp+" and is sold at a profit of "+pct+"%. Find its selling price.",fmt(sp),[fmt(sp+cp*.05),fmt(cp*(100-pct)/100),fmt(sp-20)],"Selling price = "+cp+" × (100 + "+pct+")/100 = ₹"+fmt(sp)+".",35);}
+  if(/interest/i.test(topic)){var pr=n(1000,12000),rate=p([5,6,8,10,12]),yrs=n(2,5),si=pr*rate*yrs/100;return mk("Find the simple interest on ₹"+pr+" at "+rate+"% per annum for "+yrs+" years.",fmt(si),[fmt(si+rate*10),fmt(pr*rate/100),fmt(si*2)],"SI = P × R × T / 100 = ₹"+fmt(si)+".",35);}
+  if(/time & work|pipes/i.test(topic)){var da=n(4,18),db=n(5,22),together=Number((da*db/(da+db)).toFixed(2));return mk("A completes a job in "+da+" days and B in "+db+" days. How long will they take working together?",together,[Number((together+1).toFixed(2)),Number((together-1).toFixed(2)),da+db],"Combined rate = 1/"+da+" + 1/"+db+". Time = "+da+" × "+db+"/"+(da+db)+" ≈ "+together+" days.",40);}
+  if(/speed|trains|boats/i.test(topic)){var spd=n(36,90),hrs=n(2,6),dst=spd*hrs;return mk("A train travels at "+spd+" km/h for "+hrs+" hours. How far does it travel?",dst,[dst+spd,dst-spd,dst+hrs*5],"Distance = speed × time = "+spd+" × "+hrs+" = "+dst+" km.",30);}
+  if(/mixtures|alligation/i.test(topic)){var ca=n(10,35),cb=n(50,90),conc=(ca+cb)/2;return mk("Equal quantities of a "+ca+"% solution and a "+cb+"% solution are mixed. Find the concentration.",conc,[conc+5,conc-10,cb-ca],"For equal quantities, concentration = ("+ca+" + "+cb+")/2 = "+conc+"%.",30);}
+  if(/partnership|ages/i.test(topic)){if(r()<.5){var aa=n(2,8),bb=n(3,9),profit=(aa+bb)*n(100,300),piece=profit*aa/(aa+bb);return mk("A and B invest in the ratio "+aa+":"+bb+". If total profit is ₹"+profit+", find A's share.",piece,[piece+100,profit*bb/(aa+bb),piece-50],"A's share = "+aa+"/"+(aa+bb)+" × "+profit+" = ₹"+piece+".",35);}var age=n(18,50),gap=n(4,18),parent=age*2+gap*2;return mk("A parent is "+(gap*2)+" years older than twice a child's age. The child is "+age+". How old is the parent?",parent,[parent+4,age+gap*2,parent-2],"Parent's age = 2 × "+age+" + "+(gap*2)+" = "+parent+".",35);}
+  if(/probability|permutation/i.test(topic)){var red=n(2,7),blue=n(3,9),ans3=red+"/"+(red+blue);return mk("A bag contains "+red+" red balls and "+blue+" blue balls. Find the probability of drawing a red ball.",ans3,[blue+"/"+(red+blue),red+"/"+blue,"1/"+(red+blue)],"Favourable outcomes / total outcomes = "+red+"/"+(red+blue)+".",35);}
+  if(/mensuration/i.test(topic)){var len=n(8,45),wid=n(4,25),area=len*wid;return mk("Find the area of a rectangle with length "+len+" cm and breadth "+wid+" cm.",area,[2*(len+wid),area+len,area-wid],"Area = length × breadth = "+len+" × "+wid+" = "+area+" cm².",25);}
+ }
+ if(section==="awareness"){
+  var facts=[
+   ["The Reserve Bank of India commenced operations in which year?","1935",["1947","1949","1955"],"RBI commenced operations on 1 April 1935."],
+   ["Which organisation operates UPI?","NPCI",["SEBI","NABARD","IRDAI"],"NPCI operates UPI and other retail payment systems."],
+   ["Which institution is India's central bank?","Reserve Bank of India",["State Bank of India","NABARD","SIDBI"],"The Reserve Bank of India is India's central bank."],
+   ["DICGC deposit insurance is generally capped at how much per depositor per bank?","₹5 lakh",["₹1 lakh","₹2 lakh","₹10 lakh"],"DICGC cover is up to ₹5 lakh per depositor per bank."],
+   ["NABARD primarily focuses on which area?","Agriculture and rural development",["Stock-market regulation","Insurance regulation","Telecom licensing"],"NABARD is the apex development institution for agriculture and rural development."],
+   ["What does KYC stand for?","Know Your Customer",["Keep Your Cash","Know Your Credit","Key Yield Calculation"],"KYC is a customer-identification process."],
+   ["Which system settles high-value transfers individually in real time?","RTGS",["Cheque truncation","ATM switching","Batch-only clearing"],"RTGS means Real Time Gross Settlement."],
+   ["What does CRR stand for?","Cash Reserve Ratio",["Credit Recovery Rate","Current Repo Return","Capital Risk Reserve"],"CRR is the cash reserve ratio maintained with RBI."],
+   ["Which regulator oversees India's securities market?","SEBI",["IRDAI","PFRDA","NABARD"],"SEBI regulates India's securities market."],
+   ["Which regulator oversees insurance companies in India?","IRDAI",["SEBI","NPCI","SIDBI"],"IRDAI regulates and develops the insurance sector."],
+   ["What does NEFT stand for?","National Electronic Funds Transfer",["National Equity Finance Trade","New Electronic Foreign Transfer","National Exchange for Fixed Tenure"],"NEFT is a nationwide electronic funds-transfer system."],
+   ["RuPay is a card payment network developed by which organisation?","NPCI",["SEBI","NABARD","IRDAI"],"RuPay was developed by NPCI."],
+   ["What does NPA mean in banking?","Non-Performing Asset",["Net Payment Advice","National Pension Account","New Priority Allocation"],"NPA stands for Non-Performing Asset."],
+   ["Which organisation provides deposit insurance in India?","DICGC",["SEBI","NPCI","PFRDA"],"DICGC provides eligible deposit insurance."],
+   ["Which body regulates the pension sector in India?","PFRDA",["IRDAI","SEBI","NPCI"],"PFRDA regulates and develops India's pension sector."],
+   ["What is financial inclusion intended to improve?","Access to useful and affordable financial services",["Only stock trading access","Only lending to large firms","Elimination of all branches"],"Financial inclusion expands access to appropriate formal financial services."],
+   ["What does SLR stand for?","Statutory Liquidity Ratio",["Secure Lending Return","Standard Liability Register","Savings Leverage Rate"],"SLR concerns specified liquid assets held against bank liabilities."],
+   ["Which code identifies a bank branch for electronic transfers?","IFSC",["CVV","PAN","PIN"],"IFSC identifies a bank branch for electronic payment systems."],
+   ["What does UPI enable users to do?","Make instant interoperable payments between bank accounts",["Only withdraw cash","Only trade securities","Only open fixed deposits"],"UPI facilitates real-time payments using linked bank accounts."],
+   ["What is phishing?","A deceptive attempt to obtain sensitive information",["A reconciliation method","A deposit insurance type","An interest formula"],"Phishing uses deceptive messages or websites to steal information."],
+   ["Which institution is a development financial institution for MSMEs?","SIDBI",["IRDAI","SEBI","NPCI"],"SIDBI supports financing and development of MSMEs."],
+   ["A fixed deposit generally offers which feature?","A stated tenure and agreed interest terms",["Unlimited overdraft","A bank ownership share","Guaranteed stock returns"],"A fixed deposit is held for an agreed tenure with specified interest terms."],
+   ["Which system is commonly used for immediate interbank electronic transfers?","IMPS",["Paper-only clearing","Demand draft clearing","Treasury bill auction"],"IMPS supports immediate interbank electronic fund transfers."],
+   ["What is the usual purpose of a credit score?","To summarise a borrower's credit history and risk profile",["Set the repo rate","Measure account balance only","Calculate tax directly"],"Credit scores help lenders assess credit history and risk."]
+  ];
+  var fact=pick(r,facts),phrases=[fact[0],"For an Indian banking-awareness quiz: "+fact[0].charAt(0).toLowerCase()+fact[0].slice(1),"Choose the correct banking fact. "+fact[0]];
+  return mk(p(phrases),fact[1],fact[2],fact[3],25);
+ }
+ if(section==="computer"||section==="reasonComp"&&/computer|network|database|software|hardware|operating|office|cyber/i.test(topic)){
+  var cf=[
+   ["Which component is commonly called the computer's main processor?","CPU",["RAM","SSD","NIC"],"The CPU executes instructions."],
+   ["Which memory is volatile?","RAM",["ROM","Optical disc","Flash drive"],"RAM usually loses its contents when power is removed."],
+   ["What does URL stand for?","Uniform Resource Locator",["Universal Routing Link","Unified Record Location","User Reference Label"],"A URL identifies a web resource."],
+   ["Which protocol is commonly used to browse websites securely?","HTTPS",["Telnet","FTP without security","HTTP only"],"HTTPS protects web traffic using TLS."],
+   ["What is a firewall's primary purpose?","Filter network traffic using security rules",["Increase screen brightness","Store spreadsheet formulas","Cool the CPU"],"A firewall controls allowed and blocked network traffic."],
+   ["Which of these is an operating system?","Linux",["SQL","HTML","DNS"],"Linux is an operating system."],
+   ["What does DNS do?","Maps domain names to network addresses",["Formats spreadsheets","Encrypts every local file","Checks printer ink"],"DNS resolves domain names to IP addresses."],
+   ["Which shortcut usually copies selected text in Windows?","Ctrl + C",["Ctrl + V","Ctrl + X","Ctrl + P"],"Ctrl+C copies selected content."],
+   ["Which is a relational database management system?","MySQL",["Bluetooth","JPEG","SMTP"],"MySQL is a relational database system."],
+   ["What is malware?","Software intended to harm, exploit or gain unauthorised access",["A backup schedule","A printer driver only","A public-key standard"],"Malware is malicious software."],
+   ["Which unit measures CPU clock rate?","Hertz",["Pixels per inch","Litres","Decibels"],"Clock rate is expressed in hertz, often gigahertz."],
+   ["What does LAN stand for?","Local Area Network",["Large Access Number","Logical Application Node","Linked Account Name"],"A LAN connects devices in a limited area."],
+   ["Which is an input device?","Keyboard",["Monitor","Speaker","Projector"],"A keyboard sends input to a computer."],
+   ["In a spreadsheet, what does B4 usually mean?","Column B, row 4",["Workbook 4","Four sheets named B","Row B, column 4"],"Cell references name the column then the row."]
+  ];
+  var f=pick(r,cf);return mk(f[0],f[1],f[2],f[3],25);
+ }
+ if(section==="english"){
+  if(/error|sentence correction|phrase replacement|grammar/i.test(topic)){
+   var es=pick(r,[{a:"Neither of the two proposals",b:"are acceptable",c:"to the committee",fix:"is acceptable",exp:"“Neither” is singular here, so use “is” rather than “are”."},{a:"Each of the candidates",b:"have submitted",c:"the required documents",fix:"has submitted",exp:"“Each” takes a singular verb."},{a:"The manager, along with her assistants,",b:"were present",c:"at the meeting",fix:"was present",exp:"The main subject is the singular “manager”."},{a:"She has been working here",b:"since five years",c:"without a break",fix:"for five years",exp:"Use “for” with a duration and “since” with a starting point."},{a:"Hardly had the train left",b:"than it began",c:"to rain heavily",fix:"when it began",exp:"The standard correlative is “hardly…when”."},{a:"One of my friends",b:"live in Chennai",c:"near the railway station",fix:"lives in Chennai",exp:"“One” is the singular subject."}]);
+   var opts=["Part A: "+es.a,"Part B: "+es.b,"Part C: "+es.c,"No error"];return mk("Identify the part containing the grammatical error.<br><br>"+es.a+" / "+es.b+" / "+es.c+".",opts[1],[opts[0],opts[2],opts[3]].filter(function(z){return z!==opts[1];}),es.exp+" Correction: “"+es.fix+"”.",30);
   }
-}
-
-function switchPaper(paperId) {
-  if (confirm("Switching papers will reset your current attempt. Proceed?")) {
-    loadPaper(paperId);
-  } else {
-    document.getElementById("paperSelect").value = currentPaperId;
+  if(/reading comprehension/i.test(topic)){
+   var passage=pick(r,["Digital banking can reduce travel and waiting time, but access alone does not guarantee safe use. Banks must pair easy interfaces with authentication, fraud awareness and effective complaint resolution. Customers should never share their one-time passwords or PINs with callers claiming to represent a bank.","Financial inclusion is more than opening an account. It also involves affordable access to savings, payments, credit and insurance, along with the ability to use services confidently. Local-language education and reliable infrastructure help people benefit from formal financial services.","Technology can speed up routine bank transactions, while trained staff remain important for complex complaints and customers needing extra assistance. Good service design makes it easy to move between digital tools and human support."]);
+   var rq=pick(r,[{q:"What is the main idea of the passage?",a:"Technology should be supported by safeguards and effective assistance",w:["All bank branches should close","Speed matters more than customer protection","Customers should avoid every digital service"],e:"The passage presents technology as useful, but says it must be supported by protection and assistance."},{q:"Which inference is supported by the passage?",a:"Access does not automatically mean safe or effective use",w:["Digital banking has no benefits","All complaints are caused by technology","Authentication makes education unnecessary"],e:"The passage says access alone is insufficient."},{q:"Which action is consistent with the passage?",a:"Use secure authentication and seek official help for complaints",w:["Share a PIN with a caller","Ignore suspicious messages","Assume digital transactions are risk-free"],e:"Security and effective complaint resolution are encouraged."}]);
+   return mk("<strong>Read the passage and answer the question.</strong><br><br>"+passage+"<br><br>"+rq.q,rq.a,rq.w,rq.e,50);
   }
+  if(/cloze|fill in|double fillers/i.test(topic)){var f=pick(r,[["A prudent borrower should ___ the repayment terms before accepting a loan.","review",["overlook","postpone","conceal"],"“Review” means examine carefully."],["The committee reached a decision after a ___ discussion.","thorough",["scarce","fragile","reluctant"],"“Thorough” means detailed and careful."],["The new process is intended to ___ unnecessary delays.","reduce",["prolong","conceal","multiply"],"“Reduce” fits the intended meaning."],["Customers should remain ___ when sharing personal details online.","cautious",["careless","indifferent","impulsive"],"“Cautious” means careful to avoid risk."],["The bank will ___ the request after verifying all documents.","process",["evade","scatter","withdraw"],"“Process” means handle through the required procedure."]]);return mk(f[0],f[1],f[2],f[3],25);}
+  if(/idioms/i.test(topic)){var idi=pick(r,[["“A blessing in disguise” means…","something good that first seemed bad",["a warning","a promise never kept","a costly mistake"],"It refers to a benefit not apparent at first."],["“At the eleventh hour” means…","at the last possible moment",["very early","after a full year","without preparation"],"It means at the last moment."],["“Break the ice” means…","make people feel more comfortable",["damage something","end a business deal","avoid all conversation"],"It means easing initial social tension."]]);return mk(idi[0],idi[1],idi[2],idi[3],20);}
+  if(/vocabulary|word swap|spelling/i.test(topic)){var vocab=pick(r,[["Choose the closest meaning of “mitigate”.","lessen",["intensify","postpone","duplicate"],"Mitigate means make less severe."],["Choose the closest meaning of “prudent”.","wise and careful",["reckless","uncertain","extravagant"],"Prudent means acting with care and good judgement."],["Choose the closest meaning of “ubiquitous”.","widespread",["rare","temporary","hidden"],"Ubiquitous means present or found everywhere."],["Choose the antonym of “scarce”.","abundant",["limited","rare","insufficient"],"Abundant is the opposite of scarce."],["Choose the correctly spelled word.","accommodation",["accomodation","acommodation","accommadation"],"The correct spelling is accommodation."]]);return mk(vocab[0],vocab[1],vocab[2],vocab[3],25);}
+  if(/para jumbles/i.test(topic)){var seq=pick(r,[["The bank launched a mobile application.","Customers can now check balances remotely.","This has reduced visits for routine enquiries."],["First, the applicant submits the form.","The documents are then verified.","The bank communicates its decision after verification."]]);var ansOrder=seq.join(" → ");return mk("Choose the logical order of the sentences:<br><br>1. "+seq[0]+"<br>2. "+seq[1]+"<br>3. "+seq[2],ansOrder,[seq.slice().reverse().join(" → "),[seq[1],seq[0],seq[2]].join(" → "),[seq[2],seq[1],seq[0]].join(" → ")],"Follow the time and reference clues in the sentences.",40);}
+  return mk("Choose the best word to complete the sentence: A clear explanation can ___ misunderstandings between the customer and the bank.","reduce",["worsen","conceal","multiply"],"“Reduce” fits the sentence's meaning.",25);
+ }
+ if(section==="reasoning"||section==="reasonComp"){
+  if(/syllogism|only a few/i.test(topic)){var sy=pick(r,[{s:"All clerks are employees. All employees are trained.",c:"Only conclusion I follows",w:["Only conclusion II follows","Both conclusions I and II follow","Neither conclusion follows"],cns:"I. All clerks are trained. II. All trained people are clerks.",e:"Clerks are included within employees, who are included within trained people. The reverse does not follow."},{s:"Some managers are graduates. All graduates are readers.",c:"Both conclusions I and II follow",w:["Only conclusion I follows","Only conclusion II follows","Neither conclusion follows"],cns:"I. Some managers are readers. II. Some readers are graduates.",e:"The managers who are graduates are readers; those graduates are also readers."},{s:"No loan is a grant. All subsidies are grants.",c:"Only conclusion I follows",w:["Only conclusion II follows","Both conclusions I and II follow","Neither conclusion follows"],cns:"I. No subsidy is a loan. II. All loans are subsidies.",e:"Subsidies are grants, and no grant is a loan. The reverse inclusion is not supported."}]);return mk("Statements: "+sy.s+"<br><br>Conclusions: "+sy.cns+"<br><br>Which conclusion(s) follow(s)?",sy.c,sy.w,sy.e,45);}
+  if(/inequalities/i.test(topic)){var v1=ri(r,70,100),v2=ri(r,50,69),v3=ri(r,25,49),v4=ri(r,1,24);return mk("If A > B, B > C and C > D, which relation is definitely true?","A > D",["A < D","A = D","Relationship cannot be determined"],"The chain A > B > C > D proves A > D.",20);}
+  if(/coding/i.test(topic)){var word=pick(r,["BANK","LOAN","CASH","FUND","RATE","MINT","GOLD","RISK"]),shift=ri(r,1,3),code=word.split("").map(function(c){return String.fromCharCode(65+(c.charCodeAt(0)-65+shift)%26);}).join("");return mk("Every letter is moved "+shift+" place(s) forward in the alphabet. How is “"+word+"” coded?",code,[word.split("").map(function(c){return String.fromCharCode(65+(c.charCodeAt(0)-65+shift+1)%26);}).join(""),word.split("").reverse().join(""),word],"Move each letter "+shift+" place(s) forward: "+word+" → "+code+".",25);}
+  if(/blood/i.test(topic)){var br=pick(r,[{q:"A is the sister of B. B is the son of C. How is A related to C?",c:"Daughter",w:["Sister","Mother","Aunt"],e:"A and B are children of C. A is C's daughter."},{q:"P is the father of Q. Q is the sister of R. How is P related to R?",c:"Father",w:["Uncle","Brother","Grandfather"],e:"Q and R are siblings; P is their father."},{q:"M is the mother of N. N is the father of O. How is M related to O?",c:"Grandmother",w:["Aunt","Sister","Mother"],e:"M is N's mother and N is O's father."}]);return mk(br.q,br.c,br.w,br.e,25);}
+  if(/direction|distance/i.test(topic)){var no=ri(r,3,12),ea=ri(r,4,15);return mk("A person walks "+no+" km north and then "+ea+" km east. In which direction is the person from the starting point?","North-East",["North-West","South-East","South-West"],"The final position is both north and east of the starting point.",25);}
+  if(/ranking|order/i.test(topic)){var tot=ri(r,24,65),top=ri(r,3,Math.floor(tot/2)),bot=tot-top+1;return mk("In a class of "+tot+" students, Ravi ranks "+top+"th from the top. What is his rank from the bottom?",bot,[bot+1,bot-1,top],"Rank from bottom = total − rank from top + 1 = "+tot+" − "+top+" + 1 = "+bot+".",20);}
+  if(/alphanumeric|number series|logical sequence/i.test(topic)){var a=ri(r,2,14),d=ri(r,3,9),arr=[a];for(var t=1;t<5;t++)arr.push(arr[t-1]+d+t);var nx=arr[4]+d+5;return mk("Find the next number: "+arr.join(", ")+", ?",nx,[nx+2,nx-3,nx+5],"The differences are "+d+", "+(d+1)+", "+(d+2)+", "+(d+3)+". Next add "+(d+4)+".",25);}
+  if(/data sufficiency/i.test(topic)){var yy=ri(r,4,25),xx=ri(r,2,18);return mk("What is x?<br><br>I. x + "+yy+" = "+(xx+yy)+".<br>II. x − "+yy+" = "+(xx-yy)+".<br><br>Choose the conclusion.", "Either statement alone is sufficient",["Both statements are required","Statement I alone is sufficient but II is not","Statement II alone is sufficient but I is not"],"Statement I alone gives x = "+xx. Statement II alone also gives x = "+xx.",35);}
+  if(/seating|puzzles|floor|box|scheduling/i.test(topic)){var names=["Asha","Bala","Charan","Divya","Eshan"];for(var j=names.length-1;j>0;j--){var k=ri(r,0,j);var tmp=names[j];names[j]=names[k];names[k]=tmp;}var clues=names.slice(0,-1).map(function(a,i){return a+" sits immediately to the left of "+names[i+1]+".";}).join(" ");return mk("Five people — Asha, Bala, Charan, Divya and Eshan — sit in a row facing north. "+clues+" Who sits in the middle?",names[2],names.filter(function(v){return v!==names[2];}).slice(0,3),"The immediate-left clues establish the order: "+names.join(" — ")+". The middle person is "+names[2]+".",50);}
+  return mk("If P > Q, Q = R and R > S, which relation is definitely true?","P > S",["P < S","P = S","Cannot be determined"],"P > Q = R > S, therefore P > S.",25);
+ }
+ return mk("A practice scenario uses "+ri(r,12,95)+" units in each of "+ri(r,3,20)+" equal groups. How should the total be found?","Multiply the units by the number of groups",["Add the groups only","Subtract the units from the groups","Divide the units by zero"],"For equal groups, multiply the quantity in one group by the number of groups.",25);
 }
-
-function loadPaper(paperId) {
-  currentPaperId = paperId;
-  currentPaper = PAPERS[paperId];
-  currentSectionKey = "english";
-  currentQIndex = 0;
-  remainingSectionSeconds = sectionalTimeLimit;
-  userResponses = {};
-
-  currentPaper.questions.forEach((q, idx) => {
-    userResponses[q.id] = {
-      selectedOption: null,
-      status: (idx === 0) ? "not_answered" : "not_visited",
-      timeSpent: 0
-    };
-  });
-
-  document.getElementById("examWorkspaceView").style.display = "flex";
-  document.getElementById("sectionNavBar").style.display = "flex";
-  document.getElementById("timerBox").style.display = "flex";
-  document.getElementById("analyticsScreen").style.display = "none";
-
-  renderSectionTabs();
-  renderCurrentQuestion();
-  renderPalette();
-  startSectionTimer();
-}
-
-function toggleStrictMode(isChecked) {
-  strictMode = isChecked;
-  renderSectionTabs();
-}
-
-function renderSectionTabs() {
-  const container = document.getElementById("sectionTabsContainer");
-  container.innerHTML = "";
-
-  SECTIONS_CONFIG.forEach(sec => {
-    const tab = document.createElement("div");
-    tab.className = "sec-tab";
-    if (sec.key === currentSectionKey) {
-      tab.classList.add("active");
-    }
-
-    if (strictMode && sec.key !== currentSectionKey) {
-      tab.classList.add("locked");
-      tab.title = "Section locked until current 20-min section concludes.";
-    }
-
-    tab.innerHTML = `<span>${sec.name} (${sec.count})</span>`;
-    
-    tab.onclick = () => {
-      if (!strictMode || sec.key === currentSectionKey) {
-        switchSection(sec.key);
-      } else {
-        alert("In Strict Exam Mode, you cannot switch sections until the current 20-minute section completes, mirroring real IBPS/SBI examinations.");
-      }
-    };
-
-    container.appendChild(tab);
-  });
-}
-
-function getQuestionsOfCurrentSection() {
-  return currentPaper.questions.filter(q => q.section === currentSectionKey);
-}
-
-function switchSection(sectionKey) {
-  currentSectionKey = sectionKey;
-  currentQIndex = 0;
-  if (strictMode) {
-    remainingSectionSeconds = sectionalTimeLimit;
+function matchesBank(q,topic,section){var a=String(q.topic||"").toLowerCase(),b=topic.toLowerCase(),wanted=section==="reasonComp"?(q.section==="reasoning"||q.section==="computer"):section==="data"?(q.section==="quant"||q.section==="data"):q.section===section;var aliases={"syllogism":["syllogisms"],"simplification & approximation":["simplification","approximation"],"error spotting / error detection":["error detection"],"percentage & average":["averages"],"profit, loss & discount":["profit & loss"],"time & work / pipes & cisterns":["time & work","pipes & cisterns"],"time, speed & distance / trains / boats":["speed, time & distance","boats & streams"],"order & ranking":["ranking & order"],"seating arrangements":["seating arrangement","circular seating","linear seating"],"puzzles (floor / box / scheduling)":["floor puzzle","box puzzle"]};return wanted&&(a===b||a.includes(b)||b.includes(a)||(aliases[b]||[]).some(function(x){return a.includes(x);}));}
+function makeUnique(sec,topic,diff,seed,used,runSet){var q,tries=0;while(tries<100){q=genQ(sec.id,topic,diff,(seed+tries*104729)>>>0);var f=fp(q);if(!used.has(f)&&!runSet.has(f)){runSet.add(f);used.add(f);q.section=sec.id;q.section_name=sec.name;q.marks=sec.marks/sec.count;q.negative_mark=q.marks*.25;return q;}tries++;}q=genQ(sec.id,topic,diff,(seed+tries*104729)>>>0);q.question+=" <small>Practice variant "+seed+"</small>";runSet.add(fp(q));used.add(fp(q));q.section=sec.id;q.section_name=sec.name;q.marks=sec.marks/sec.count;q.negative_mark=q.marks*.25;return q;}
+function launchTest(){
+ var exam=$("examSelect").value,stage=$("stageSelect").value,mode=modeValue(),prof=PROFILES[exam],all=prof[stage].map(function(s){return Object.assign({},s);}),secIndex=Number($("sectionSelect").value)||0,section=all[secIndex],topic=$("topicSelect").value,paperNo=Number($("paperSelectLobby").value)||1,used=fingerprintSeen(),runSet=new Set(),seq=(Number(localStorage.getItem(STORE.seq))||0)+1;
+ try{localStorage.setItem(STORE.seq,String(seq));}catch(e){}
+ var chosen=all;if(mode==="section")chosen=[section];if(mode==="topic")chosen=[Object.assign({},section,{count:Number($("questionCount").value)||20,minutes:$("timerMode").value==="untimed"?0:Math.max(5,Math.ceil((Number($("questionCount").value)||20)*.55)),marks:Number($("questionCount").value)||20})];
+ var baseSeed=hash([exam,stage,mode,section.id,topic,paperNo,seq,Date.now()].join("|")),items=[];
+ chosen.forEach(function(sec,si){var tps=mode==="topic"?[topic]:topicsFor(sec.id);var pool=mode==="topic"?baseBank.filter(function(q){return matchesBank(q,topic,sec.id)&&!used.has(fp(q));}):[];
+  for(var i=0;i<sec.count;i++){var lev=mode==="topic"?$("difficultySelect").value:(mode==="section"&&$("difficultySelect").value!=="Mixed"?$("difficultySelect").value:pickLevel(i,sec.count,rng(baseSeed+si*997+i*7))),q=null;
+   while(pool.length){var candidate=pool.splice(Math.floor(Math.random()*pool.length),1)[0],cp=fp(candidate);if(!used.has(cp)&&!runSet.has(cp)){q=Object.assign({},candidate);q.id="BANK_"+hash(cp+"|"+seq).toString(36);q.section=sec.id;q.section_name=sec.name;q.difficulty=lev;q.marks=sec.marks/sec.count;q.negative_mark=q.marks*.25;q.benchmark_seconds=q.benchmark_seconds||40;runSet.add(cp);used.add(cp);break;}}
+   if(!q){var topicPick=mode==="topic"?topic:pick(rng(baseSeed+si*3001+i*19),tps);q=makeUnique(sec,topicPick,lev,baseSeed+si*13007+i*7919,used,runSet);}
+   if(/topic practice|section mock|full mock/.test(q.title||"")){}items.push(q);
   }
-  
-  const secQs = getQuestionsOfCurrentSection();
-  const firstQ = secQs[0];
-  if (userResponses[firstQ.id].status === "not_visited") {
-    userResponses[firstQ.id].status = "not_answered";
-  }
-
-  renderSectionTabs();
-  renderCurrentQuestion();
-  renderPalette();
+ });
+ writeStore(STORE.seen,Array.from(used).slice(-15000));
+ activeTest={exam:exam,stage:stage,mode:mode,profile:prof,sections:chosen,allProfileSections:all,paperNo:paperNo,topic:topic,seed:baseSeed,questions:items,title:mode==="full"?prof.name+" · "+(stage==="prelims"?"Prelims":"Mains")+" · Mock "+String(paperNo).padStart(2,"0"):mode==="section"?prof.name+" · "+section.name+" Sectional Mock":prof.name+" · "+topic+" Practice",untimed:mode==="topic"&&$("timerMode").value==="untimed",composite:!!prof.compositePrelims&&stage==="prelims"&&mode==="full",separatelyTimed:!(!!prof.compositePrelims&&stage==="prelims"&&mode==="full")};
+ responses={};items.forEach(function(q){responses[q.id]={selected:null,marked:false,timeSpent:0,visited:false};});sectionIndex=0;questionIndex=0;questionSeconds=0;paused=false;answerChecked=false;renderTestSetup();showScreen("exam");enterSection(0);window.scrollTo(0,0);
 }
-
-function renderCurrentQuestion() {
-  const secQs = getQuestionsOfCurrentSection();
-  const q = secQs[currentQIndex];
-  const resp = userResponses[q.id];
-
-  document.getElementById("qNumberTitle").textContent = `Question No. ${currentQIndex + 1} of ${secQs.length} [${q.topic}]`;
-  document.getElementById("qBenchmarkPill").innerHTML = `Target: <b>${q.benchmark_seconds}s</b> &bull; ${q.difficulty}`;
-  document.getElementById("qTextBody").innerHTML = q.question;
-
-  const optContainer = document.getElementById("qOptionsContainer");
-  optContainer.innerHTML = "";
-
-  q.options.forEach((optText, oIdx) => {
-    const isSelected = resp.selectedOption === oIdx;
-    const label = document.createElement("label");
-    label.className = `q-option-item ${isSelected ? "selected" : ""}`;
-    label.innerHTML = `
-      <input type="radio" name="optRadio" value="${oIdx}" ${isSelected ? "checked" : ""}>
-      <div class="q-option-text"><b>(${String.fromCharCode(65 + oIdx)})</b> ${optText}</div>
-    `;
-
-    label.onclick = (e) => {
-      document.querySelectorAll(".q-option-item").forEach(el => el.classList.remove("selected"));
-      label.classList.add("selected");
-      label.querySelector("input").checked = true;
-    };
-
-    optContainer.appendChild(label);
-  });
-
-  document.getElementById("qContentScroll").scrollTop = 0;
+function renderTestSetup(){$("examChip").textContent=(activeTest.profile.name+" · "+activeTest.stage).toUpperCase();$("examPaperTitle").textContent=activeTest.title;$("timerCaption").textContent=activeTest.untimed?"PRACTICE MODE":activeTest.composite?"TOTAL TIME LEFT":"SECTION TIME LEFT";$("sectionTabs").innerHTML=activeTest.sections.map(function(s,i){return '<button class="section-tab" data-i="'+i+'">'+eh(s.name)+' <small>'+s.count+'</small></button>';}).join("");$("sectionTabs").querySelectorAll("button").forEach(function(b){b.addEventListener("click",function(){var i=Number(b.dataset.i);if(!activeTest.separatelyTimed||i===sectionIndex)enterSection(i);});});$("pausedBanner").hidden=true;$("pauseButton").textContent="Ⅱ Pause";}
+function showScreen(name){$("lobbyScreen").hidden=name!=="lobby";$("examScreen").hidden=name!=="exam";$("resultScreen").hidden=name!=="result";window.scrollTo(0,0);}
+function secQs(){return activeTest.questions.filter(function(q){return q.section===activeTest.sections[sectionIndex].id;});}
+function curQ(){return secQs()[questionIndex];}
+function enterSection(i){if(tickHandle){clearInterval(tickHandle);tickHandle=null;}sectionIndex=i;questionIndex=0;questionSeconds=0;answerChecked=false;sectionRemaining=activeTest.sections[i].minutes*60;if(activeTest.untimed)sectionRemaining=0;if(activeTest.composite&&i===0)overallRemaining=activeTest.sections.reduce(function(s,x){return s+x.minutes*60;},0);var q=curQ();if(q)responses[q.id].visited=true;renderAll();if(!paused)startClock();}
+function startClock(){if(tickHandle)clearInterval(tickHandle);tickHandle=setInterval(function(){if(paused)return;if(activeTest.composite){overallRemaining--;if(overallRemaining<=0){updateTimer();submitNow();return;}}else if(!activeTest.untimed){sectionRemaining--;if(sectionRemaining<=0){sectionRemaining=0;updateTimer();timeUp();return;}}var q=curQ();if(q&&responses[q.id])responses[q.id].timeSpent++;questionSeconds++;updateTimer();updateQTime();},1000);updateTimer();}
+function updateTimer(){var v=activeTest.composite?overallRemaining:sectionRemaining;if(activeTest.untimed){$("timerDisplay").textContent="∞";return;}v=Math.max(0,v);$("timerDisplay").textContent=String(Math.floor(v/60)).padStart(2,"0")+":"+String(v%60).padStart(2,"0");$("timerDisplay").style.color=v<180?"var(--red)":"var(--cyan)";}
+function updateQTime(){$("questionTime").textContent=String(Math.floor(questionSeconds/60)).padStart(2,"0")+":"+String(questionSeconds%60).padStart(2,"0");}
+function timeUp(){if(tickHandle){clearInterval(tickHandle);tickHandle=null;}if(sectionIndex<activeTest.sections.length-1){enterSection(sectionIndex+1);}else submitNow();}
+function renderAll(){renderTabs();renderQuestion();renderPalette();renderCounts();updateTimer();}
+function renderTabs(){document.querySelectorAll(".section-tab").forEach(function(b,i){b.classList.toggle("active",i===sectionIndex);b.classList.toggle("locked",activeTest.separatelyTimed&&i!==sectionIndex);b.disabled=paused||(activeTest.separatelyTimed&&i!==sectionIndex);});$("currentSectionTitle").textContent=activeTest.sections[sectionIndex].name;$("progressBar").style.width=((questionIndex+1)/Math.max(1,secQs().length)*100)+"%";$("questionProgressLabel").textContent="Question "+(questionIndex+1)+" of "+secQs().length;}
+function renderQuestion(){var q=curQ();if(!q)return;var r=responses[q.id];$("questionNumber").textContent="QUESTION "+String(questionIndex+1).padStart(2,"0");$("topicChip").textContent=q.topic;$("questionText").innerHTML=q.question;$("passageBox").hidden=true;$("optionsBox").innerHTML="";
+ q.options.forEach(function(opt,i){var lab=document.createElement("label");lab.className="option-label"+(r.selected===i?" selected":"");var radio=document.createElement("input");radio.type="radio";radio.name="answer";radio.checked=r.selected===i;radio.disabled=paused;radio.addEventListener("change",function(){r.selected=i;r.visited=true;answerChecked=false;renderQuestion();renderPalette();renderCounts();});var letter=document.createElement("span");letter.className="option-letter";letter.textContent=String.fromCharCode(65+i);var tx=document.createElement("span");tx.className="option-text";tx.textContent=String(opt);lab.append(radio,letter,tx);$("optionsBox").appendChild(lab);});
+ $("markButton").classList.toggle("active",r.marked);$("markButton").textContent=r.marked?"⚑ Marked for review":"⚑ Mark for review";$("prevButton").disabled=paused||questionIndex===0;$("clearButton").disabled=paused||r.selected===null;$("nextButton").disabled=paused;$("nextButton").textContent=questionIndex===secQs().length-1?(sectionIndex===activeTest.sections.length-1?"Review / submit →":"Next section →"):"Save & next →";$("questionTime").textContent=String(Math.floor((r.timeSpent||0)/60)).padStart(2,"0")+":"+String((r.timeSpent||0)%60).padStart(2,"0");$("feedbackBox").hidden=true;
+ if(activeTest.mode==="topic"&&answerChecked){var ok=r.selected===q.correct_index;$("feedbackBox").hidden=false;$("feedbackBox").className="feedback-box "+(ok?"correct":"incorrect");$("feedbackBox").innerHTML="<b>"+(ok?"Correct":"Not quite")+"</b> · Answer: "+eh(q.options[q.correct_index])+"<br>"+eh(q.explanation||"Review the correct option.");}
+ renderTabs();}
+function renderPalette(){var qs=secQs();$("questionPalette").innerHTML="";qs.forEach(function(q,i){var r=responses[q.id],b=document.createElement("button");b.className="palette-item"+(r.selected!==null?" answered":"")+(r.marked?" review":"")+(i===questionIndex?" current":"");b.textContent=i+1;b.disabled=paused;b.addEventListener("click",function(){gotoQ(i);});$("questionPalette").appendChild(b);});}
+function renderCounts(){var rs=secQs().map(function(q){return responses[q.id];});$("answeredCount").textContent=rs.filter(function(r){return r.selected!==null;}).length;$("reviewCount").textContent=rs.filter(function(r){return r.marked;}).length;$("unansweredCount").textContent=rs.filter(function(r){return r.selected===null;}).length;$("paletteProgress").textContent=rs.filter(function(r){return r.selected!==null;}).length+"/"+rs.length;}
+function gotoQ(i){if(paused)return;questionIndex=Math.max(0,Math.min(i,secQs().length-1));questionSeconds=0;answerChecked=false;var q=curQ();if(q)responses[q.id].visited=true;renderAll();}
+function nextQ(){if(paused)return;var q=curQ();if(q)responses[q.id].visited=true;if(activeTest.mode==="topic"&&responses[q.id].selected!==null&&!answerChecked){answerChecked=true;renderQuestion();return;}if(questionIndex<secQs().length-1){gotoQ(questionIndex+1);return;}if(sectionIndex<activeTest.sections.length-1){if(activeTest.separatelyTimed){alert("This section has its own timer. It will advance when its time ends.");return;}enterSection(sectionIndex+1);return;}openSubmit();}
+function prevQ(){if(paused)return;if(questionIndex>0)gotoQ(questionIndex-1);else if(!activeTest.separatelyTimed&&sectionIndex>0)enterSection(sectionIndex-1);}
+function toggleMark(){if(paused)return;var q=curQ();responses[q.id].marked=!responses[q.id].marked;renderQuestion();renderPalette();}
+function clearAnswer(){if(paused)return;responses[curQ().id].selected=null;answerChecked=false;renderAll();}
+function pauseToggle(){if(!activeTest)return;paused=!paused;$("pausedBanner").hidden=!paused;$("pauseButton").textContent=paused?"▶ Resume":"Ⅱ Pause";if(paused){if(tickHandle)clearInterval(tickHandle);tickHandle=null;}else{renderAll();startClock();}}
+function openSubmit(){var qs=activeTest.questions,answered=qs.filter(function(q){return responses[q.id].selected!==null;}).length;$("confirmText").textContent="You have answered "+answered+" of "+qs.length+" questions. Submit to see marks, accuracy and question-level time analysis?";$("confirmModal").hidden=false;}
+function submitNow(){if(tickHandle)clearInterval(tickHandle);tickHandle=null;paused=false;$("confirmModal").hidden=true;var qs=activeTest.questions,correct=0,wrong=0,skip=0,score=0,time=0,sections={},topics={};activeTest.sections.forEach(function(s){sections[s.id]={name:s.name,total:0,correct:0,wrong:0,skipped:0,score:0,marks:s.marks,time:0};});
+ qs.forEach(function(q){var r=responses[q.id],attempt=r.selected!==null,ok=attempt&&r.selected===q.correct_index,t=r.timeSpent||0;time+=t;var s=sections[q.section]||(sections[q.section]={name:q.section_name,total:0,correct:0,wrong:0,skipped:0,score:0,marks:q.marks,time:0});s.total++;s.time+=t;var ts=topics[q.topic]||(topics[q.topic]={total:0,correct:0,wrong:0,skipped:0,time:0});ts.total++;ts.time+=t;
+ if(!attempt){skip++;s.skipped++;ts.skipped++;}else if(ok){correct++;var val=q.marks===undefined?1:q.marks;score+=val;s.correct++;s.score+=val;ts.correct++;}else{wrong++;var pen=q.negative_mark===undefined?(q.marks===undefined?.25:q.marks*.25):q.negative_mark;score-=pen;s.wrong++;s.score-=pen;ts.wrong++;}});
+ var attempted=correct+wrong,acc=attempted?correct/attempted*100:0,max=qs.reduce(function(a,q){return a+(q.marks===undefined?1:q.marks);},0);currentResult={title:activeTest.title,exam:activeTest.profile.name,stage:activeTest.stage,mode:activeTest.mode,paperNo:activeTest.paperNo,score:score,maxMarks:max,correct:correct,wrong:wrong,skip:skip,accuracy:acc,time:time,sectionStats:sections,topicStats:topics,questions:cloneData(qs),responses:cloneData(responses),savedAt:Date.now()};
+ var hist=readStore(STORE.history,[]);hist.unshift({title:currentResult.title,exam:currentResult.exam,stage:currentResult.stage,mode:currentResult.mode,paperNo:currentResult.paperNo,score:score,maxMarks:max,correct:correct,wrong:wrong,skip:skip,accuracy:acc,time:time,savedAt:Date.now(),topicStats:topics});writeStore(STORE.history,hist.slice(0,80));showResults(currentResult);showScreen("result");initHistory();}
+function cloneData(x){return JSON.parse(JSON.stringify(x));}
+function showResults(res){$("resultSubtitle").textContent=res.title+" · "+new Date(res.savedAt).toLocaleString();$("scoreValue").textContent=Number(res.score).toFixed(1).replace(/\.0$/,"");$("scoreDenominator").textContent="/ "+Number(res.maxMarks).toFixed(0);$("resultTitle").textContent=res.accuracy>=85?"Strong accuracy — now improve speed":res.accuracy>=65?"Good base — tighten your weak areas":"Build accuracy with focused topic drills";$("resultDescription").textContent=res.correct+" correct · "+res.wrong+" incorrect · "+res.skip+" unanswered. Negative marking is included in the net score.";$("accuracyValue").textContent=res.accuracy.toFixed(1)+"%";$("correctValue").textContent=res.correct;$("wrongValue").textContent=res.wrong;$("skippedValue").textContent=res.skip;$("timeValue").textContent=Math.floor(res.time/60)+"m";
+ $("sectionAnalysis").innerHTML=Object.values(res.sectionStats).map(function(s){var a=s.total?s.correct/s.total*100:0;return '<div><div class="analysis-row-head"><b>'+eh(s.name)+'</b><span>'+s.correct+'/'+s.total+' · '+a.toFixed(0)+'% · '+s.score.toFixed(1)+' marks</span></div><div class="analysis-bar"><span style="width:'+a+'%"></span></div><div class="analysis-insight">'+Math.floor(s.time/60)+'m '+s.time%60+'s spent · '+s.wrong+' incorrect · '+s.skipped+' skipped</div></div>';}).join("");
+ var tps=Object.entries(res.topicStats).sort(function(a,b){return a[1].correct/Math.max(1,a[1].total)-b[1].correct/Math.max(1,b[1].total);});$("topicAnalysis").innerHTML=tps.slice(0,8).map(function(pair){var t=pair[0],s=pair[1],a=s.correct/Math.max(1,s.total)*100;return '<div><div class="analysis-row-head"><b>'+eh(t)+'</b><span>'+a.toFixed(0)+'% · '+s.correct+'/'+s.total+'</span></div><div class="analysis-bar"><span style="width:'+a+'%;background:'+(a<50?"linear-gradient(90deg,#ff7985,#ffb47a)":"")+'"></span></div><div class="analysis-insight">'+Math.round(s.time/Math.max(1,s.total))+' sec per question · '+s.wrong+' wrong / '+s.skipped+' skipped</div></div>';}).join("");
+ var weak=tps.length?tps[0][0]:"Syllogism";$("nextStepsTitle").textContent="Next: practise "+weak+".";$("nextStepsText").textContent="Start at Easy, review each explanation, then attempt a Moderate timed topic set. If accuracy is already high but time is slow, practise solving shortcuts before the next full mock.";$("practiceWeakButton").dataset.topic=weak;renderReview("all");}
+function renderReview(filter){if(!currentResult)return;var qs=currentResult.questions.filter(function(q){var r=currentResult.responses[q.id],ok=r.selected!==null&&r.selected===q.correct_index;if(filter==="wrong")return r.selected!==null&&!ok;if(filter==="skipped")return r.selected===null;if(filter==="correct")return ok;if(filter==="slow")return (r.timeSpent||0)>=60;return true;});$("questionReviewList").innerHTML=qs.slice(0,180).map(function(q){var r=currentResult.responses[q.id],ok=r.selected!==null&&r.selected===q.correct_index,status=r.selected===null?"skipped":ok?"correct":"wrong";return '<article class="review-item"><div class="review-item-top"><span class="review-status '+status+'">'+status+'</span><span class="topic-chip">'+eh(q.topic)+'</span><span class="muted" style="font-size:10px">'+Math.round(r.timeSpent||0)+' sec</span></div><div class="review-question">'+q.question+'</div><div class="review-meta">Your answer: '+(r.selected===null?"Not answered":eh(q.options[r.selected]))+' · Correct: '+eh(q.options[q.correct_index])+'</div><div class="review-explanation">'+eh(q.explanation||"Review this question type and retry a fresh variant.")+'</div></article>';}).join("")||'<p class="muted">No questions match this filter.</p>';}
+function initHistory(){var hist=readStore(STORE.history,[]);$("attemptStat").textContent=hist.length;var c=hist.reduce(function(a,h){return a+(h.correct||0);},0),att=hist.reduce(function(a,h){return a+(h.correct||0)+(h.wrong||0);},0);$("accuracyStat").textContent=att?Math.round(c/att*100)+"%":"—";$("streakStat").textContent=hist.filter(function(h){return h.accuracy<70;}).length;renderHistory();}
+function renderHistory(){var hist=readStore(STORE.history,[]);$("recentSection").hidden=!hist.length;if(!hist.length)return;$("recentList").innerHTML=hist.slice(0,6).map(function(h){return '<article class="recent-card"><b>'+eh(h.title)+'</b><span>'+new Date(h.savedAt).toLocaleDateString()+' · '+Number(h.score).toFixed(1)+'/'+Number(h.maxMarks).toFixed(0)+' · '+Number(h.accuracy).toFixed(0)+'% accuracy</span></article>';}).join("");}
+function startTopicDirect(topic,section){showScreen("lobby");var mode=document.querySelector('input[name="practiceMode"][value="topic"]');mode.checked=true;$("examSelect").value="sbi-clerk";$("stageSelect").value="prelims";updateMode();var target=section||groupTopic(topic),idx=selectedProfile.prelims.findIndex(function(s){return s.id===target;});if(idx<0)idx=target==="data"?1:target==="computer"?2:0;$("sectionSelect").value=String(idx);updateTopics();var exact=[].slice.call($("topicSelect").options).find(function(o){return o.value===topic;});if(!exact)exact=[].slice.call($("topicSelect").options).find(function(o){return o.value.toLowerCase().indexOf(topic.toLowerCase().split(" ")[0])>=0;});if(exact)$("topicSelect").value=exact.value;$("difficultySelect").value="Easy";$("questionCount").value="20";$("timerMode").value="timed";updatePattern();window.scrollTo({top:0,behavior:"smooth"});}
+function init(){
+ renderPaperOptions();
+ fetch("questions_bank.json").then(function(r){if(!r.ok)throw new Error("question bank not available");return r.json();}).then(function(d){baseBank=Object.keys(d||{}).reduce(function(a,k){return a.concat(d[k].questions||[]);},[]);}).catch(function(){baseBank=[];});
+ selectedProfile=PROFILES[$("examSelect").value];updateMode();initHistory();showScreen("lobby");
+ $("examSelect").addEventListener("change",updateMode);$("stageSelect").addEventListener("change",updateMode);$("questionCount").addEventListener("change",updatePattern);$("difficultySelect").addEventListener("change",updatePattern);$("timerMode").addEventListener("change",updatePattern);$("sectionSelect").addEventListener("change",function(){updateTopics();updatePattern();});document.querySelectorAll('input[name="practiceMode"]').forEach(function(el){el.addEventListener("change",updateMode);});
+ $("startButton").addEventListener("click",launchTest);$("startWeakTopic").addEventListener("click",function(){var hist=readStore(STORE.history,[]),weak=null;if(hist.length){var tps=[];hist.slice(0,5).forEach(function(h){Object.keys(h.topicStats||{}).forEach(function(t){var z=h.topicStats[t];tps.push({topic:t,acc:(z.correct||0)/Math.max(1,z.total||0)});});});tps.sort(function(a,b){return a.acc-b.acc;});weak=tps[0]&&tps[0].topic;}startTopicDirect(weak||"Syllogism");});
+ $("historyButton").addEventListener("click",function(){if($("recentSection").hidden){alert("Complete a test to build your progress history.");return;}$("recentSection").scrollIntoView({behavior:"smooth"});});
+ $("brandHome").addEventListener("click",function(e){e.preventDefault();if(!$("examScreen").hidden&&!confirm("Leave this attempt? It will not be saved as a completed test."))return;if(tickHandle)clearInterval(tickHandle);showScreen("lobby");initHistory();});
+ $("backToLobby").addEventListener("click",function(){if(confirm("Exit this attempt? The score won't be added to completed history.")){if(tickHandle)clearInterval(tickHandle);showScreen("lobby");initHistory();}});
+ $("pauseButton").addEventListener("click",pauseToggle);$("resumeButton").addEventListener("click",pauseToggle);$("prevButton").addEventListener("click",prevQ);$("nextButton").addEventListener("click",nextQ);$("markButton").addEventListener("click",toggleMark);$("clearButton").addEventListener("click",clearAnswer);$("submitButton").addEventListener("click",openSubmit);$("cancelConfirm").addEventListener("click",function(){$("confirmModal").hidden=true;});$("confirmSubmit").addEventListener("click",submitNow);
+ $("reviewFilter").addEventListener("change",function(e){renderReview(e.target.value);});$("resultHomeButton").addEventListener("click",function(){showScreen("lobby");initHistory();});$("resultHomeButtonBottom").addEventListener("click",function(){showScreen("lobby");initHistory();});$("practiceWeakButton").addEventListener("click",function(){startTopicDirect($("practiceWeakButton").dataset.topic);});$("newVariantButton").addEventListener("click",function(){showScreen("lobby");document.querySelector('input[name="practiceMode"][value="full"]').checked=true;$("examSelect").value=activeTest.exam;$("stageSelect").value=activeTest.stage;updateMode();$("paperSelectLobby").value=String(activeTest.paperNo);});
+ $("clearHistoryButton").addEventListener("click",function(){if(confirm("Clear saved test history on this device?")){writeStore(STORE.history,[]);initHistory();}});
+ document.querySelectorAll("[data-fast-topic]").forEach(function(b){b.addEventListener("click",function(){var x=b.dataset.fastTopic.split("|");startTopicDirect(x[1],x[0]);});});
+ window.addEventListener("beforeunload",function(){if(tickHandle)clearInterval(tickHandle);});
 }
-
-function handleSaveAndNext() {
-  const secQs = getQuestionsOfCurrentSection();
-  const q = secQs[currentQIndex];
-  const selectedRadio = document.querySelector('input[name="optRadio"]:checked');
-
-  if (selectedRadio) {
-    userResponses[q.id].selectedOption = parseInt(selectedRadio.value);
-    userResponses[q.id].status = "answered";
-  } else {
-    if (userResponses[q.id].selectedOption === null) {
-      userResponses[q.id].status = "not_answered";
-    }
-  }
-
-  advanceToNextQuestion();
-}
-
-function handleMarkForReview() {
-  const secQs = getQuestionsOfCurrentSection();
-  const q = secQs[currentQIndex];
-  const selectedRadio = document.querySelector('input[name="optRadio"]:checked');
-
-  if (selectedRadio) {
-    userResponses[q.id].selectedOption = parseInt(selectedRadio.value);
-    userResponses[q.id].status = "ans_review";
-  } else {
-    userResponses[q.id].status = "review";
-  }
-
-  advanceToNextQuestion();
-}
-
-function handleClearResponse() {
-  const secQs = getQuestionsOfCurrentSection();
-  const q = secQs[currentQIndex];
-  userResponses[q.id].selectedOption = null;
-  userResponses[q.id].status = "not_answered";
-
-  document.querySelectorAll('input[name="optRadio"]').forEach(r => r.checked = false);
-  document.querySelectorAll(".q-option-item").forEach(el => el.classList.remove("selected"));
-  renderPalette();
-}
-
-function advanceToNextQuestion() {
-  const secQs = getQuestionsOfCurrentSection();
-  if (currentQIndex < secQs.length - 1) {
-    currentQIndex++;
-    const nextQ = secQs[currentQIndex];
-    if (userResponses[nextQ.id].status === "not_visited") {
-      userResponses[nextQ.id].status = "not_answered";
-    }
-    renderCurrentQuestion();
-    renderPalette();
-  } else {
-    if (strictMode) {
-      alert("You have reached the end of this section! You can review or wait for the section timer.");
-    } else {
-      alert("End of this section reached. You can switch to the next section via the tabs above.");
-    }
-    renderPalette();
-  }
-}
-
-function jumpToQuestion(idx) {
-  currentQIndex = idx;
-  const secQs = getQuestionsOfCurrentSection();
-  const q = secQs[currentQIndex];
-  if (userResponses[q.id].status === "not_visited") {
-    userResponses[q.id].status = "not_answered";
-  }
-  renderCurrentQuestion();
-  renderPalette();
-}
-
-function renderPalette() {
-  const secQs = getQuestionsOfCurrentSection();
-  const grid = document.getElementById("paletteGrid");
-  grid.innerHTML = "";
-
-  let cAns = 0, cNotAns = 0, cNotVis = 0, cRev = 0, cAnsRev = 0;
-
-  currentPaper.questions.forEach(q => {
-    const s = userResponses[q.id].status;
-    if (s === "answered") cAns++;
-    else if (s === "not_answered") cNotAns++;
-    else if (s === "not_visited") cNotVis++;
-    else if (s === "review") cRev++;
-    else if (s === "ans_review") cAnsRev++;
-  });
-
-  document.getElementById("countAnswered").textContent = cAns;
-  document.getElementById("countNotAnswered").textContent = cNotAns;
-  document.getElementById("countNotVisited").textContent = cNotVis;
-  document.getElementById("countReview").textContent = cRev;
-  document.getElementById("countAnsReview").textContent = cAnsRev;
-
-  document.getElementById("paletteSectionLabel").textContent = `${currentSectionKey.toUpperCase()} PALETTE`;
-  document.getElementById("paletteCountLabel").textContent = `${currentQIndex + 1}/${secQs.length}`;
-
-  secQs.forEach((q, idx) => {
-    const btn = document.createElement("button");
-    const st = userResponses[q.id].status;
-    btn.className = `palette-btn st-${st.replace('_', '-')}`;
-    if (idx === currentQIndex) {
-      btn.classList.add("active");
-    }
-    btn.textContent = idx + 1;
-    btn.onclick = () => jumpToQuestion(idx);
-    grid.appendChild(btn);
-  });
-}
-
-function startSectionTimer() {
-  clearInterval(timerInterval);
-  clearInterval(qTimerInterval);
-
-  qTimerInterval = setInterval(() => {
-    const secQs = getQuestionsOfCurrentSection();
-    if (secQs && secQs[currentQIndex]) {
-      const qId = secQs[currentQIndex].id;
-      if (userResponses[qId]) {
-        userResponses[qId].timeSpent = (userResponses[qId].timeSpent || 0) + 1;
-      }
-    }
-  }, 1000);
-
-  timerInterval = setInterval(() => {
-    remainingSectionSeconds--;
-    updateTimerDisplay();
-
-    if (remainingSectionSeconds <= 0) {
-      handleSectionTimerExpiry();
-    }
-  }, 1000);
-
-  updateTimerDisplay();
-}
-
-function updateTimerDisplay() {
-  const m = Math.floor(remainingSectionSeconds / 60);
-  const s = remainingSectionSeconds % 60;
-  const disp = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  const el = document.getElementById("timerDisplay");
-  el.textContent = disp;
-
-  if (remainingSectionSeconds <= 180) {
-    el.classList.add("warning");
-  } else {
-    el.classList.remove("warning");
-  }
-}
-
-function handleSectionTimerExpiry() {
-  clearInterval(timerInterval);
-  clearInterval(qTimerInterval);
-
-  if (currentSectionKey === "english") {
-    alert("⏳ Time's up for English Language! Auto-advancing to Section 2: Quantitative Aptitude.");
-    switchSection("quant");
-    startSectionTimer();
-  } else if (currentSectionKey === "quant") {
-    alert("⏳ Time's up for Quantitative Aptitude! Auto-advancing to Section 3: Reasoning Ability.");
-    switchSection("reasoning");
-    startSectionTimer();
-  } else {
-    alert("⏳ Final Section Time Expired! Generating your detailed performance diagnostics...");
-    finalizeAndSubmitExam();
-  }
-}
-
-function confirmSubmitTest() {
-  let cAns = 0, cNotAns = 0, cNotVis = 0, cRev = 0, cAnsRev = 0;
-  currentPaper.questions.forEach(q => {
-    const s = userResponses[q.id].status;
-    if (s === "answered") cAns++;
-    else if (s === "not_answered") cNotAns++;
-    else if (s === "not_visited") cNotVis++;
-    else if (s === "review") cRev++;
-    else if (s === "ans_review") cAnsRev++;
-  });
-
-  const body = document.getElementById("submitModalBody");
-  body.innerHTML = `
-    <p style="margin-bottom:12px;">Are you sure you want to submit your mock test? Here is your question status summary:</p>
-    <table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;">
-      <tr style="background:#f1f5f9;"><th style="padding:6px;border:1px solid #cbd5e1;">Status</th><th style="padding:6px;border:1px solid #cbd5e1;">Count</th></tr>
-      <tr><td style="padding:6px;border:1px solid #cbd5e1;color:#16a34a;font-weight:700;">Answered (Evaluated)</td><td style="padding:6px;border:1px solid #cbd5e1;">${cAns}</td></tr>
-      <tr><td style="padding:6px;border:1px solid #cbd5e1;color:#7c3aed;font-weight:700;">Answered & Marked for Review (Evaluated)</td><td style="padding:6px;border:1px solid #cbd5e1;">${cAnsRev}</td></tr>
-      <tr><td style="padding:6px;border:1px solid #cbd5e1;color:#8b5cf6;font-weight:700;">Marked for Review (Not Evaluated)</td><td style="padding:6px;border:1px solid #cbd5e1;">${cRev}</td></tr>
-      <tr><td style="padding:6px;border:1px solid #cbd5e1;color:#dc2626;font-weight:700;">Not Answered</td><td style="padding:6px;border:1px solid #cbd5e1;">${cNotAns}</td></tr>
-      <tr><td style="padding:6px;border:1px solid #cbd5e1;color:#64748b;">Not Visited</td><td style="padding:6px;border:1px solid #cbd5e1;">${cNotVis}</td></tr>
-      <tr style="background:#f8fafc;font-weight:700;"><td style="padding:6px;border:1px solid #cbd5e1;">Total Questions</td><td style="padding:6px;border:1px solid #cbd5e1;">${currentPaper.questions.length}</td></tr>
-    </table>
-  `;
-
-  document.getElementById("submitModal").style.display = "flex";
-}
-
-function closeSubmitModal() {
-  document.getElementById("submitModal").style.display = "none";
-}
-
-function openQuestionPaperModal() {
-  const secQs = getQuestionsOfCurrentSection();
-  document.getElementById("qpModalTitle").textContent = `${currentSectionKey.toUpperCase()} - Complete Question Paper (${secQs.length} Questions)`;
-  const body = document.getElementById("qpModalBody");
-  body.innerHTML = "";
-
-  secQs.forEach((q, idx) => {
-    const item = document.createElement("div");
-    item.style.padding = "10px 0";
-    item.style.borderBottom = "1px solid #e2e8f0";
-    item.innerHTML = `
-      <div style="font-weight:700;color:#1e3a8a;margin-bottom:4px;">Q${idx + 1}. [${q.topic} - ${q.difficulty}]</div>
-      <div style="margin-bottom:6px;">${q.question}</div>
-      <div style="font-size:12px;color:#64748b;">
-        ${q.options.map((opt, oIdx) => `<div>(${String.fromCharCode(65+oIdx)}) ${opt}</div>`).join('')}
-      </div>
-    `;
-    body.appendChild(item);
-  });
-
-  document.getElementById("qpModal").style.display = "flex";
-}
-
-function closeQuestionPaperModal() {
-  document.getElementById("qpModal").style.display = "none";
-}
-
-function openInstructionsModal() {
-  document.getElementById("instructionsModal").style.display = "flex";
-}
-
-function closeInstructionsModal() {
-  document.getElementById("instructionsModal").style.display = "none";
-}
-
-function finalizeAndSubmitExam() {
-  closeSubmitModal();
-  clearInterval(timerInterval);
-  clearInterval(qTimerInterval);
-
-  document.getElementById("examWorkspaceView").style.display = "none";
-  document.getElementById("sectionNavBar").style.display = "none";
-  document.getElementById("timerBox").style.display = "none";
-  document.getElementById("analyticsScreen").style.display = "block";
-
-  computeAndRenderAnalytics();
-}
-
-function computeAndRenderAnalytics() {
-  let totalScore = 0;
-  let correctCount = 0;
-  let incorrectCount = 0;
-  let unattemptedCount = 0;
-
-  let fatalTraps = [];
-  let inefficientSolves = [];
-  let carelessErrors = [];
-  let sweetSpots = [];
-
-  let sectionStats = {
-    english: { attempted: 0, correct: 0, incorrect: 0, score: 0, time: 0 },
-    quant: { attempted: 0, correct: 0, incorrect: 0, score: 0, time: 0 },
-    reasoning: { attempted: 0, correct: 0, incorrect: 0, score: 0, time: 0 }
-  };
-
-  let topicStats = {};
-
-  currentPaper.questions.forEach((q, idx) => {
-    const resp = userResponses[q.id];
-    const isAttempted = (resp.status === "answered" || resp.status === "ans_review") && (resp.selectedOption !== null);
-    const timeSpent = resp.timeSpent || 0;
-    const isCorrect = isAttempted && (resp.selectedOption === q.correct_index);
-
-    sectionStats[q.section].time += timeSpent;
-
-    if (!topicStats[q.topic]) {
-      topicStats[q.topic] = { section: q.section_name, total: 0, correct: 0, time: 0 };
-    }
-    topicStats[q.topic].total++;
-    topicStats[q.topic].time += timeSpent;
-
-    if (isAttempted) {
-      sectionStats[q.section].attempted++;
-      if (isCorrect) {
-        correctCount++;
-        sectionStats[q.section].correct++;
-        sectionStats[q.section].score += 1.0;
-        totalScore += 1.0;
-        topicStats[q.topic].correct++;
-
-        if (timeSpent >= 90) {
-          inefficientSolves.push({ q, timeSpent });
-        } else if (timeSpent <= 45) {
-          sweetSpots.push({ q, timeSpent });
-        }
-      } else {
-        incorrectCount++;
-        sectionStats[q.section].incorrect++;
-        sectionStats[q.section].score -= 0.25;
-        totalScore -= 0.25;
-
-        if (timeSpent >= 90) {
-          fatalTraps.push({ q, timeSpent });
-        } else if (timeSpent <= 30) {
-          carelessErrors.push({ q, timeSpent });
-        }
-      }
-    } else {
-      unattemptedCount++;
-    }
-  });
-
-  const totalAttempted = correctCount + incorrectCount;
-  const accuracy = totalAttempted > 0 ? ((correctCount / totalAttempted) * 100).toFixed(1) : 0;
-  const expectedCutoff = currentPaper.cutoff || 58.5;
-  const isPassed = totalScore >= expectedCutoff;
-
-  document.getElementById("heroScore").textContent = `${totalScore.toFixed(2)} / 100`;
-  document.getElementById("heroCutoff").textContent = expectedCutoff.toFixed(2);
-  document.getElementById("heroAccuracy").textContent = `${accuracy}%`;
-  document.getElementById("heroExamTitle").textContent = `${currentPaper.title} &bull; ${currentPaper.exam}`;
-
-  let estimatedPercentile = Math.min(99.9, Math.max(10.0, 50 + (totalScore - expectedCutoff) * 2.5)).toFixed(1);
-  document.getElementById("heroPercentile").textContent = `${estimatedPercentile}%`;
-
-  const statusBadge = document.getElementById("heroStatusBadge");
-  if (isPassed) {
-    statusBadge.className = "status-badge-lg badge-passed";
-    statusBadge.textContent = "PASSED OVERALL CUTOFF";
-  } else {
-    statusBadge.className = "status-badge-lg badge-failed";
-    statusBadge.textContent = "BELOW EXPECTED CUTOFF";
-  }
-
-  document.getElementById("quadTrapCount").textContent = fatalTraps.length;
-  let trapSecs = fatalTraps.reduce((acc, cur) => acc + cur.timeSpent, 0);
-  document.getElementById("quadTrapTime").textContent = `Wasted: ${(trapSecs/60).toFixed(1)} mins (${(fatalTraps.length * 0.25).toFixed(2)} marks lost)`;
-
-  document.getElementById("quadInefficientCount").textContent = inefficientSolves.length;
-  let ineffSecs = inefficientSolves.reduce((acc, cur) => acc + cur.timeSpent, 0);
-  document.getElementById("quadInefficientTime").textContent = `Total Time: ${(ineffSecs/60).toFixed(1)} mins`;
-
-  document.getElementById("quadCarelessCount").textContent = carelessErrors.length;
-  document.getElementById("quadCarelessLoss").textContent = `Direct loss: -${(carelessErrors.length * 0.25).toFixed(2)} marks`;
-
-  document.getElementById("quadSweetCount").textContent = sweetSpots.length;
-  document.getElementById("quadSweetGain").textContent = `High-yield gain: +${sweetSpots.length}.00 marks`;
-
-  const secTableBody = document.getElementById("sectionalTableBody");
-  secTableBody.innerHTML = "";
-
-  SECTIONS_CONFIG.forEach(sec => {
-    const s = sectionStats[sec.key];
-    const cut = currentPaper.sectional_cutoffs[sec.key] || 9.0;
-    const secPassed = s.score >= cut;
-    const row = document.createElement("tr");
-
-    row.innerHTML = `
-      <td><b>${sec.name}</b></td>
-      <td>${s.attempted} / ${sec.count}</td>
-      <td style="color:#16a34a;font-weight:700;">${s.correct}</td>
-      <td style="color:#dc2626;font-weight:700;">${s.incorrect}</td>
-      <td style="color:#dc2626;">-${(s.incorrect * 0.25).toFixed(2)}</td>
-      <td style="font-weight:800;color:${secPassed ? '#16a34a' : '#dc2626'};">${s.score.toFixed(2)}</td>
-      <td>${cut.toFixed(1)}</td>
-      <td>${Math.floor(s.time/60)}m ${s.time%60}s</td>
-      <td><span class="tag-badge ${secPassed ? 'tag-strong' : 'tag-weak'}">${secPassed ? 'CLEARED' : 'MISSED'}</span></td>
-    `;
-    secTableBody.appendChild(row);
-  });
-
-  const topicTableBody = document.getElementById("topicTableBody");
-  topicTableBody.innerHTML = "";
-
-  for (let topic in topicStats) {
-    const t = topicStats[topic];
-    const acc = t.total > 0 ? Math.round((t.correct / t.total) * 100) : 0;
-    const avgSec = t.total > 0 ? Math.round(t.time / t.total) : 0;
-
-    let badgeClass = "tag-moderate";
-    let badgeText = "NEEDS REVISION";
-    if (acc >= 80) {
-      badgeClass = "tag-strong";
-      badgeText = "MASTERED";
-    } else if (acc <= 50) {
-      badgeClass = "tag-weak";
-      badgeText = "PRIORITY WEAKNESS";
-    }
-
-    const tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td><b>${topic}</b></td>
-      <td>${t.section}</td>
-      <td>${t.total}</td>
-      <td>${t.correct}</td>
-      <td><b>${acc}%</b></td>
-      <td>${avgSec}s</td>
-      <td><span class="tag-badge ${badgeClass}">${badgeText}</span></td>
-    `;
-    topicTableBody.appendChild(tr);
-  }
-
-  renderSolutionsList("all");
-}
-
-function renderSolutionsList(filterMode) {
-  const container = document.getElementById("solutionsListContainer");
-  container.innerHTML = "";
-
-  currentPaper.questions.forEach((q, idx) => {
-    const resp = userResponses[q.id];
-    const isAttempted = (resp.status === "answered" || resp.status === "ans_review") && (resp.selectedOption !== null);
-    const isCorrect = isAttempted && (resp.selectedOption === q.correct_index);
-    const timeSpent = resp.timeSpent || 0;
-    const isFatalTrap = isAttempted && !isCorrect && (timeSpent >= 90);
-
-    if (filterMode === "wrong" && (!isAttempted || isCorrect)) return;
-    if (filterMode === "correct" && !isCorrect) return;
-    if (filterMode === "unattempted" && isAttempted) return;
-    if (filterMode === "traps" && !isFatalTrap) return;
-
-    const card = document.createElement("div");
-    card.className = "solution-item-card";
-
-    let statusPill = `<span class="tag-badge" style="background:#e2e8f0;color:#475569;">Unattempted</span>`;
-    if (isAttempted) {
-      if (isCorrect) {
-        statusPill = `<span class="tag-badge tag-strong">Correct (+1.0)</span>`;
-      } else {
-        statusPill = `<span class="tag-badge tag-weak">Incorrect (-0.25)</span>`;
-      }
-    }
-
-    if (isFatalTrap) {
-      statusPill += ` <span class="tag-badge" style="background:#fee2e2;color:#991b1b;">🚨 Time Trap (${timeSpent}s)</span>`;
-    }
-
-    card.innerHTML = `
-      <div class="sol-header" onclick="toggleSolutionBody(this)">
-        <div>
-          <b>Q${idx + 1}.</b> <span style="color:#64748b;margin-left:6px;">[${q.section_name} &bull; ${q.topic}]</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span style="font-size:12px;color:#64748b;">Time: <b>${timeSpent}s</b> (Target: ${q.benchmark_seconds}s)</span>
-          ${statusPill}
-          <span style="font-size:12px;color:#94a3b8;">▼</span>
-        </div>
-      </div>
-      <div class="sol-body">
-        <div style="margin-bottom:12px;">${q.question}</div>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
-          ${q.options.map((opt, oIdx) => {
-            let optStyle = "padding:6px 10px;border-radius:4px;font-size:13px;border:1px solid #e2e8f0;";
-            if (oIdx === q.correct_index) {
-              optStyle = "padding:6px 10px;border-radius:4px;font-size:13px;border:1px solid #22c55e;background:#dcfce7;color:#15803d;font-weight:700;";
-            } else if (isAttempted && oIdx === resp.selectedOption) {
-              optStyle = "padding:6px 10px;border-radius:4px;font-size:13px;border:1px solid #ef4444;background:#fee2e2;color:#b91c1c;font-weight:700;";
-            }
-            return `<div style="${optStyle}">(${String.fromCharCode(65+oIdx)}) ${opt} ${oIdx === q.correct_index ? '✓ (Correct Answer)' : ''} ${(isAttempted && oIdx === resp.selectedOption && !isCorrect) ? '✗ (Your Response)' : ''}</div>`;
-          }).join('')}
-        </div>
-        <div class="expl-box">
-          <div style="font-weight:700;color:#1e3a8a;margin-bottom:4px;">💡 Step-by-Step Explanation & Shortcut:</div>
-          <div>${q.explanation}</div>
-        </div>
-      </div>
-    `;
-
-    container.appendChild(card);
-  });
-}
-
-function toggleSolutionBody(headerEl) {
-  const body = headerEl.nextElementSibling;
-  body.classList.toggle("open");
-}
-
-function filterSolutions(filterMode, chipEl) {
-  document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
-  chipEl.classList.add("active");
-  renderSolutionsList(filterMode);
-}
-
-function retakeCurrentTest() {
-  loadPaper(currentPaperId);
-}
-
-function chooseAnotherMock() {
-  const pKeys = Object.keys(PAPERS);
-  const nextKey = pKeys[(pKeys.indexOf(currentPaperId) + 1) % pKeys.length];
-  document.getElementById("paperSelect").value = nextKey;
-  loadPaper(nextKey);
-}
+document.addEventListener("DOMContentLoaded",init);
