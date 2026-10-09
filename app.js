@@ -909,11 +909,48 @@ function updateQTime(){$("questionTime").textContent=String(Math.floor(questionS
 function timeUp(){if(tickHandle){clearInterval(tickHandle);tickHandle=null;}if(sectionIndex<activeTest.sections.length-1){enterSection(sectionIndex+1);}else submitNow();}
 function renderAll(){renderTabs();renderQuestion();renderPalette();renderCounts();updateTimer();}
 function renderTabs(){document.querySelectorAll(".section-tab").forEach(function(b,i){b.classList.toggle("active",i===sectionIndex);b.classList.toggle("locked",activeTest.separatelyTimed&&i!==sectionIndex);b.disabled=paused||(activeTest.separatelyTimed&&i!==sectionIndex);});$("currentSectionTitle").textContent=activeTest.sections[sectionIndex].name;$("progressBar").style.width=((questionIndex+1)/Math.max(1,secQs().length)*100)+"%";$("questionProgressLabel").textContent="Question "+(questionIndex+1)+" of "+secQs().length;}
-function renderQuestion(){var q=curQ();if(!q)return;var r=responses[q.id];$("questionNumber").textContent="QUESTION "+String(questionIndex+1).padStart(2,"0");$("topicChip").textContent=q.topic;$("questionText").innerHTML=q.question;$("passageBox").hidden=true;$("optionsBox").innerHTML="";
- q.options.forEach(function(opt,i){var lab=document.createElement("label");lab.className="option-label"+(r.selected===i?" selected":"");var radio=document.createElement("input");radio.type="radio";radio.name="answer";radio.checked=r.selected===i;radio.disabled=paused;radio.addEventListener("change",function(){r.selected=i;r.visited=true;answerChecked=false;renderQuestion();renderPalette();renderCounts();});var letter=document.createElement("span");letter.className="option-letter";letter.textContent=String.fromCharCode(65+i);var tx=document.createElement("span");tx.className="option-text";tx.textContent=String(opt);lab.append(radio,letter,tx);$("optionsBox").appendChild(lab);});
- $("markButton").classList.toggle("active",r.marked);$("markButton").disabled=paused;$("submitButton").disabled=paused;$("markButton").textContent=r.marked?"⚑ Marked for review":"⚑ Mark for review";$("prevButton").disabled=paused||questionIndex===0;$("clearButton").disabled=paused||r.selected===null;$("nextButton").disabled=paused;$("nextButton").textContent=questionIndex===secQs().length-1?(sectionIndex===activeTest.sections.length-1?"Review / submit →":"Next section →"):"Save & next →";$("questionTime").textContent=String(Math.floor((r.timeSpent||0)/60)).padStart(2,"0")+":"+String((r.timeSpent||0)%60).padStart(2,"0");$("feedbackBox").hidden=true;
- // Correct answers and explanations are deliberately hidden during every active test. They appear only in the submitted results review.
- renderTabs();}
+function renderLearningTools(q,r){
+ var allowed=!!activeTest&&(activeTest.mode==="topic"||activeTest.mode==="section");
+ $("learningActions").hidden=!allowed;
+ $("showSolutionButton").hidden=!allowed||!!r.revealed;
+ $("showSolutionButton").disabled=paused||!allowed||!!r.revealed;
+ $("learningBox").hidden=!allowed||!r.revealed;
+ if(!allowed||!r.revealed){$("learningBox").innerHTML="";return;}
+ $("learningBox").innerHTML='<div class="learning-result-head"><b>Solution and method</b><span>Answer revealed</span></div><div class="learning-answer"><b>Correct answer:</b> '+eh(String(q.options[q.correct_index]))+'</div><div class="learning-explanation">'+eh(q.explanation||"Review the steps used to reach the correct option.")+'</div><button id="replaceLearnQuestionButton" class="primary-button learning-next-button" '+(paused?"disabled":"") +'>I understand — give me another question →</button><p class="learning-note">This revealed item will not count as a correct response. A fresh question from the same topic will replace it.</p>';
+ var next=$("replaceLearnQuestionButton");if(next)next.addEventListener("click",replaceLearnedQuestion);
+}
+function revealSolution(){
+ if(!activeTest||paused||(activeTest.mode!=="topic"&&activeTest.mode!=="section"))return;
+ var q=curQ();if(!q)return;var r=responses[q.id];if(!r||r.revealed)return;
+ r.revealed=true;r.selected=null;r.visited=true;
+ answerChecked=false;renderQuestion();renderPalette();renderCounts();
+}
+function replaceLearnedQuestion(){
+ if(!activeTest||paused||(activeTest.mode!=="topic"&&activeTest.mode!=="section"))return;
+ var old=curQ();if(!old)return;var oldResponse=responses[old.id];if(!oldResponse||!oldResponse.revealed)return;
+ var absoluteIndex=activeTest.questions.findIndex(function(q){return q.id===old.id;});
+ if(absoluteIndex<0)return;
+ var sec=activeTest.sections.find(function(item){return item.id===old.section;});
+ if(!sec)return;
+ var used=fingerprintSeen(),runSet=new Set();
+ activeTest.questions.forEach(function(q){if(q.id!==old.id)runSet.add(fp(q));});
+ var seed=hash(String(activeTest.seed)+"|learn-next|"+old.id+"|"+Date.now()+"|"+Math.random());
+ var fresh=makeUnique(sec,old.topic,old.difficulty||"Moderate",seed,used,runSet);
+ fresh.marks=old.marks;fresh.negative_mark=old.negative_mark;fresh.section=old.section;fresh.section_name=old.section_name;
+ activeTest.questions[absoluteIndex]=fresh;
+ delete responses[old.id];
+ responses[fresh.id]={selected:null,marked:false,timeSpent:0,visited:true,revealed:false};
+ writeStore(STORE.seen,Array.from(used).slice(-15000));
+ questionSeconds=0;answerChecked=false;renderAll();
+}
+function renderQuestion(){
+ var q=curQ();if(!q)return;var r=responses[q.id];
+ $("questionNumber").textContent="QUESTION "+String(questionIndex+1).padStart(2,"0");$("topicChip").textContent=q.topic;$("questionText").innerHTML=q.question;$("passageBox").hidden=true;$("optionsBox").innerHTML="";
+ q.options.forEach(function(opt,i){var lab=document.createElement("label");lab.className="option-label"+(r.selected===i?" selected":"");var radio=document.createElement("input");radio.type="radio";radio.name="answer";radio.checked=r.selected===i;radio.disabled=paused||!!r.revealed;radio.addEventListener("change",function(){if(r.revealed||paused)return;r.selected=i;r.visited=true;answerChecked=false;renderQuestion();renderPalette();renderCounts();});var letter=document.createElement("span");letter.className="option-letter";letter.textContent=String.fromCharCode(65+i);var tx=document.createElement("span");tx.className="option-text";tx.textContent=String(opt);lab.append(radio,letter,tx);$("optionsBox").appendChild(lab);});
+ $("markButton").classList.toggle("active",r.marked);$("markButton").disabled=paused;$("submitButton").disabled=paused;$("markButton").textContent=r.marked?"⚑ Marked for review":"⚑ Mark for review";$("prevButton").disabled=paused||questionIndex===0;$("clearButton").disabled=paused||r.selected===null||!!r.revealed;$("nextButton").disabled=paused;$("nextButton").textContent=questionIndex===secQs().length-1?(sectionIndex===activeTest.sections.length-1?"Review / submit →":"Next section →"):"Save & next →";$("questionTime").textContent=String(Math.floor((r.timeSpent||0)/60)).padStart(2,"0")+":"+String((r.timeSpent||0)%60).padStart(2,"0");$("feedbackBox").hidden=true;
+ renderLearningTools(q,r);
+ renderTabs();
+}
 function renderPalette(){var qs=secQs();$("questionPalette").innerHTML="";qs.forEach(function(q,i){var r=responses[q.id],b=document.createElement("button");b.className="palette-item"+(r.selected!==null?" answered":"")+(r.marked?" review":"")+(i===questionIndex?" current":"");b.textContent=i+1;b.disabled=paused;b.addEventListener("click",function(){gotoQ(i);});$("questionPalette").appendChild(b);});}
 function renderCounts(){var rs=secQs().map(function(q){return responses[q.id];});$("answeredCount").textContent=rs.filter(function(r){return r.selected!==null;}).length;$("reviewCount").textContent=rs.filter(function(r){return r.marked;}).length;$("unansweredCount").textContent=rs.filter(function(r){return r.selected===null;}).length;$("paletteProgress").textContent=rs.filter(function(r){return r.selected!==null;}).length+"/"+rs.length;}
 function gotoQ(i){if(paused)return;questionIndex=Math.max(0,Math.min(i,secQs().length-1));questionSeconds=0;answerChecked=false;var q=curQ();if(q)responses[q.id].visited=true;renderAll();}
@@ -963,7 +1000,7 @@ function init(){
  $("historyButton").addEventListener("click",function(){if($("recentSection").hidden){alert("Complete a test to build your progress history.");return;}$("recentSection").scrollIntoView({behavior:"smooth"});});
  $("brandHome").addEventListener("click",function(e){e.preventDefault();if(!$("examScreen").hidden&&!confirm("Leave this attempt? It will not be saved as a completed test."))return;if(tickHandle)clearInterval(tickHandle);showScreen("lobby");initHistory();});
  $("backToLobby").addEventListener("click",function(){if(confirm("Exit this attempt? The score won't be added to completed history.")){if(tickHandle)clearInterval(tickHandle);showScreen("lobby");initHistory();}});
- $("pauseButton").addEventListener("click",pauseToggle);$("resumeButton").addEventListener("click",pauseToggle);$("prevButton").addEventListener("click",prevQ);$("nextButton").addEventListener("click",nextQ);$("markButton").addEventListener("click",toggleMark);$("clearButton").addEventListener("click",clearAnswer);$("submitButton").addEventListener("click",openSubmit);$("cancelConfirm").addEventListener("click",function(){$("confirmModal").hidden=true;});$("confirmSubmit").addEventListener("click",submitNow);
+ $("pauseButton").addEventListener("click",pauseToggle);$("resumeButton").addEventListener("click",pauseToggle);$("showSolutionButton").addEventListener("click",revealSolution);$("prevButton").addEventListener("click",prevQ);$("nextButton").addEventListener("click",nextQ);$("markButton").addEventListener("click",toggleMark);$("clearButton").addEventListener("click",clearAnswer);$("submitButton").addEventListener("click",openSubmit);$("cancelConfirm").addEventListener("click",function(){$("confirmModal").hidden=true;});$("confirmSubmit").addEventListener("click",submitNow);
  $("reviewFilter").addEventListener("change",function(e){renderReview(e.target.value);});$("resultHomeButton").addEventListener("click",function(){showScreen("lobby");initHistory();});$("resultHomeButtonBottom").addEventListener("click",function(){showScreen("lobby");initHistory();});$("practiceWeakButton").addEventListener("click",function(){startTopicDirect($("practiceWeakButton").dataset.topic);});$("newVariantButton").addEventListener("click",function(){showScreen("lobby");document.querySelector('input[name="practiceMode"][value="full"]').checked=true;$("examSelect").value=activeTest.exam;$("stageSelect").value=activeTest.stage;updateMode();$("paperSelectLobby").value=String(activeTest.paperNo);});
  $("clearHistoryButton").addEventListener("click",function(){if(confirm("Clear saved test history on this device?")){writeStore(STORE.history,[]);initHistory();}});
  document.querySelectorAll("[data-fast-topic]").forEach(function(b){b.addEventListener("click",function(){var x=b.dataset.fastTopic.split("|");startTopicDirect(x[1],x[0]);});});
