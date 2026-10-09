@@ -373,7 +373,7 @@ function genAdvancedQuant(section,topic,diff,seed,mk){
  }
  if(/simplification|approximation/i.test(topic)){
   if(/approximation/i.test(topic)){
-   var baseSets=[{v:498.6,b:500,d:24.9,bd:25},{v:598.3,b:600,d:29.8,bd:30},{v:798.9,b:800,d:39.7,bd:40},{v:748.4,b:750,d:24.8,bd:25},{v:898.7,b:900,d:29.9,bd:30},{v:998.5,b:1000,d:24.9,bd:25},{v:1198.8,b:1200,d:29.8,bd:30}],bs=p(baseSets),mv=n(148,349)/10,ma=Math.round(mv/5)*5,av=n(295,705)/10,aa=Math.round(av/10)*10,approxAnswer=bs.b/bs.bd*ma+aa;
+   var baseSets=[{v:498.6,b:500,d:24.9,bd:25},{v:598.3,b:600,d:29.8,bd:30},{v:798.9,b:800,d:39.7,bd:40},{v:748.4,b:750,d:24.8,bd:25},{v:898.7,b:900,d:29.9,bd:30},{v:998.5,b:1000,d:24.9,bd:25},{v:1198.8,b:1200,d:29.8,bd:30}],bs=p(baseSets),ma=p([15,20,25,30,35]),mv=ma+p([-0.4,-0.3,-0.2,-0.1,0.1,0.2,0.3,0.4]),aa=p([30,40,50,60,70]),av=aa+p([-0.5,-0.4,-0.3,-0.2,0.2,0.3,0.4,0.5]),approxAnswer=bs.b/bs.bd*ma+aa;
    return mk("Approximate: ("+bs.v+" ÷ "+bs.d+") × "+mv+" + "+av+" = ?",approxAnswer,[approxAnswer+50,Math.max(1,approxAnswer-50),approxAnswer+100],"Round to convenient values: ("+bs.b+" ÷ "+bs.bd+") × "+ma+" + "+aa+" = "+approxAnswer+".",25);
   }
   var pct=p([15,20,25,30,35,40,45]),base=100*n(4,12),den=p([5,6,8,10]),num=n(2,den-1),fracBase=den*n(30,90),root=n(18,32),mult=p([2,3,4]),square=root*root,first=base*pct/100,second=fracBase*num/den,third=root*mult,ans=first+second-third;
