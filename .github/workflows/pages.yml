@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'banklab-payload/**'
+      - 'banklab-payload/READY'
       - 'index.html'
       - 'app.js'
       - 'questions.js'
@@ -36,7 +36,7 @@ jobs:
       - name: Unpack BankLab website payload
         shell: bash
         run: |
-          if [ -d banklab-payload ]; then
+          if [ -f banklab-payload/READY ]; then
             cat banklab-payload/part-*.b64 | tr -d '\n' | base64 --decode > /tmp/banklab-site.zip
             unzip -oq /tmp/banklab-site.zip -d .
             rm -rf banklab-payload /tmp/banklab-site.zip
