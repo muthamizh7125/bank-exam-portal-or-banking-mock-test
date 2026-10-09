@@ -47,3 +47,26 @@
   .question-text th,.question-text td{padding:8px 9px}
   .question-text th{font-size:10px}
 }
+
+
+/* Learn-as-you-go controls for sectional and topic practice */
+.learning-actions{display:flex;flex-direction:column;gap:10px;margin:16px 0 18px}
+.learning-actions[hidden],.learning-box[hidden]{display:none!important}
+#showSolutionButton{align-self:flex-start;min-height:38px;padding:10px 14px;border-color:#5b58a8;background:linear-gradient(135deg,#756cf0,#4749a5);color:#fff;font-size:12px;font-weight:700;box-shadow:0 5px 18px #625cf022}
+#showSolutionButton:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-1px)}
+.learning-box{padding:16px;border:1px solid #4a477f;border-radius:13px;background:linear-gradient(135deg,#191d35,#121c2b);color:#e6ebfb;line-height:1.65}
+.learning-result-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-bottom:10px;margin-bottom:11px;border-bottom:1px solid #373b60}
+.learning-result-head b{font-size:13px;color:#c9c4ff}
+.learning-result-head span{font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:#83e4bf;background:#44d1a015;border:1px solid #44d1a044;border-radius:30px;padding:4px 8px}
+.learning-answer{font-size:13px;margin-bottom:8px;color:#8be8c4}
+.learning-answer b{color:#e7f4ee}
+.learning-explanation{font-size:12px;color:#c4cee0;white-space:normal}
+.learning-next-button{margin-top:14px;padding:11px 15px;font-size:11px;font-weight:700}
+.learning-next-button:disabled{opacity:.45}
+.learning-note{font-size:10px;color:#8998b0;margin:9px 0 0}
+@media(max-width:680px){
+ #showSolutionButton{align-self:stretch;width:100%}
+ .learning-box{padding:12px}
+ .learning-result-head{align-items:flex-start}
+ .learning-next-button{width:100%}
+}
